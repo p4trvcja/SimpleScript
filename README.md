@@ -1,7 +1,7 @@
 # Nazwa Języka: SimpleScript
 ## 1. Zmienne:
 
-- Deklaracja zmiennych: var <nazwa_zmiennej>;
+- Deklaracja zmiennych (jawna): typ <nazwa_zmiennej>;
 - Przypisanie wartości: <nazwa_zmiennej> = <wartość>;
 - Zasięg zmiennych: globalny i lokalny (wewnątrz funkcji)
 
