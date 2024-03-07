@@ -7,7 +7,6 @@
 ## 2. Operacje arytmetyczne:
 
 - Dodawanie, odejmowanie, mnożenie, dzielenie: +, -, *, /, ++, +=
-- Nawiasowanie: ( )
 
 ## 3. Typ logiczny:
 
