@@ -49,7 +49,7 @@ for (inicjalizacja; warunek; inkrementacja) {
     // instrukcje
 }
 
-for (typ x in array){
+for (typ x in zbior){
     // instrukcje
 }
 ```
