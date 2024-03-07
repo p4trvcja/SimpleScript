@@ -36,7 +36,7 @@ for (inicjalizacja; warunek; inkrementacja) {
     // instrukcje
 }
 
-for (x in array){
+for (typ x in array){
     // instrukcje
 }
 ```
