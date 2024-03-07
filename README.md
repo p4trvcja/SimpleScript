@@ -44,7 +44,6 @@ func nazwa_funkcji(arg1, arg2, ...) {
     // instrukcje
 }
 ```
-- Możliwość wywoływania rekurencyjnego.
 
 ## 7. Operacje na ciągach znaków/Operacje na tablicach
 
