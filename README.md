@@ -78,7 +78,7 @@ string t_ciag = c + ciag;
     - reverse()
     - add()
 ```java
-int[] array = { 1, 2, 3, 4, 5 };
+int[] array = [1, 2, 3, 4, 5];
 print(array.reverse());
 array.add(2);
 ```
