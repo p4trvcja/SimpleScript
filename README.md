@@ -15,6 +15,7 @@
 - Stałe logiczne: true, false
 - Operacje logiczne: and, or, not
 - Porównywanie zmiennych numerycznych: <, >, ==, !=
+- Sprawdzenie czy zmienna nie ma wartości null -> is null
 
 ## 4. Instrukcje warunkowe:
 
