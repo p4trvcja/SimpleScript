@@ -67,6 +67,18 @@ nazwa_funkcji(arg1, arg2, ...);
 1. Na ciągach
     - Wyszukiwanie podciągów znaków
     - Konkatenacja (łączenie ciągów znaków)
+```java
+string ciag = "abcd";
+print(ciag.find("ab"));
+string d_ciag = ciag + "abcd";
+char c = "a";
+string t_ciag = c + ciag;
+```
 2. Na tablicach
     - reverse()
     - add()
+```java
+int[] array = { 1, 2, 3, 4, 5 };
+print(array.reverse());
+array.add(2);
+```
