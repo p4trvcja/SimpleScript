@@ -37,7 +37,7 @@ for (inicjalizacja; warunek; inkrementacja) {
     // instrukcje
 }
 ```
-## 6. Procedury/funkcje:
+## 6. Funkcje:
 
 ```java
 func nazwa_funkcji(arg1, arg2, ...) {
@@ -46,6 +46,11 @@ func nazwa_funkcji(arg1, arg2, ...) {
 ```
 - Możliwość wywoływania rekurencyjnego.
 
-## 7. Obsługa błędów:
+## 7. Operacje na ciągach znaków/Operacje na tablicach
 
-Komunikaty o błędach z numerem linii i ewentualnie kolumny.
+1. Na ciągach
+    - Wyszukiwanie podciągów znaków
+    - Konkatenacja (łączenie ciągów znaków)
+2. Na tablicach
+    - reverse()
+    - add()
