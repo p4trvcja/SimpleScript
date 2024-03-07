@@ -20,6 +20,8 @@
 ```java
 if (warunek) {
     // instrukcje
+} elif {
+    // instrukcje
 } else {
     // instrukcje
 }
