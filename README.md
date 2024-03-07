@@ -55,9 +55,11 @@ for (typ x in array){
 ## 6. Funkcje:
 
 ```java
-func nazwa_funkcji(typ arg1, typ arg2, ...) {
+typ_zwracany nazwa_funkcji(typ arg1, typ arg2, ...) {
     // instrukcje
 }
+
+nazwa_funkcji(arg1, arg2, ...);
 ```
 
 ## 7. Operacje na ciągach znaków/Operacje na tablicach
