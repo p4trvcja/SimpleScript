@@ -24,6 +24,18 @@ if (warunek) {
 } else {
     // instrukcje
 }
+
+
+switch (c)
+{
+ case 'A':
+    // instrukcje
+ case 'a':
+    // instrukcje
+    break;
+ default:
+    // instrukcje
+}
 ```
 ## 5. Pętle/iteracje:
 
