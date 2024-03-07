@@ -3,7 +3,6 @@
 
 - Deklaracja zmiennych (jawna): typ <nazwa_zmiennej>;
 - Przypisanie wartości: <nazwa_zmiennej> = <wartość>;
-- Zasięg zmiennych: globalny i lokalny (wewnątrz funkcji)
 
 ## 2. Operacje arytmetyczne:
 
