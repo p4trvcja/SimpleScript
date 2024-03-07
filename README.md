@@ -35,6 +35,10 @@ while (warunek) {
 for (inicjalizacja; warunek; inkrementacja) {
     // instrukcje
 }
+
+for (x in array){
+    // instrukcje
+}
 ```
 ## 6. Funkcje:
 
