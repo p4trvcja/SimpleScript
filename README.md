@@ -70,10 +70,8 @@ nazwa_funkcji(arg1, arg2, ...);
     - Konkatenacja (łączenie ciągów znaków)
 ```java
 string ciag = "abcd";
-print(ciag.find("ab"));
+print(find("ab" in ciag));
 string d_ciag = ciag + "abcd";
-char c = "a";
-string t_ciag = c + ciag;
 ```
 2. Na tablicach
     - reverse()
