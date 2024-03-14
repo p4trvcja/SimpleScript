@@ -82,9 +82,9 @@ forLoop : FOR LPAREN variableDefinition SEMICOLON conditionalOperation SEMICOLON
 forLoopArray : FOR LPAREN parameter IN NAME RPAREN LBRACE statement* RBRACE; 
 
 // conditional statements
-conditionalStatement:	ifCondition  
-                      | switchCondition 
-                      ; 
+conditionalStatement:  ifCondition  
+                       | switchCondition 
+                       ; 
 
 // if
 ifCondition : IF LPAREN conditionalOperation RPAREN LBRACE statement* RBRACE (ELIF LPAREN conditionalOperation RPAREN LBRACE statement* RBRACE)* (ELSE LBRACE statement* RBRACE)? SEMICOLON; 
