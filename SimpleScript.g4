@@ -64,8 +64,17 @@ concatenationOperation: (STRING | NAME) CONCAT (STRING | NAME);
 
 findOperation: FIND LPAREN (STRING | NAME) IN (STRING | NAME) RPAREN;
 
+// Array operations
+arrayOperation: reverseOperation 
+                | addOperation
+                ;
 
-// COMPLEX STATEMENTS, OPERATIONS 
+reverseOperation: REVERSE LPAREN NAME RPAREN;
+
+addOperation: ADD LPAREN NAME COMMA expr RPAREN;
+
+
+// COMPLEX STATEMENTS
 
 // loops
 iterationStatement: whileLoop 
