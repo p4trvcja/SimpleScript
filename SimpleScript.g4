@@ -57,7 +57,7 @@ arithmeticOperation: expr ARITHMETIC_OP expr;
 
 conditionalOperation: expr CONDITIONAL_OP expr; 
 
-singleValueOperation: value (SINGLE_VAL_OP)?; 
+singleValueOperation: ('int' | 'float') (SINGLE_VAL_OP)?; 
 
 // String operations
 stringOperation: concatenationOperation 
