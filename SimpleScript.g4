@@ -19,9 +19,9 @@ statement: variableDeclaration
            ; 
 
 // variables
-variableDeclaration : TYPE NAME SEMICOLON; 
+variableDeclaration : TYPE NAME (, NAME)* SEMICOLON; 
 
-variableDefinition: TYPE NAME ‘=’ expr SEMICOLON; 
+variableDefinition: TYPE NAME ‘=’ expr (, NAME '=' expr)* SEMICOLON; 
 
 variableAssignment : NAME ASSIGN expr SEMICOLON; 
 
