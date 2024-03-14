@@ -12,6 +12,10 @@ statement: variableDeclaration
            | conditionalStatement 
            | iterationStatement 
            | functionDeclaration 
+           | functionInvocation
+           | arrayDefinition
+           | arrayDeclaration
+           | arrayAssignment
            ; 
 
 // variables
