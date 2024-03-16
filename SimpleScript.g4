@@ -44,7 +44,7 @@ arrayDeclaration: TYPE LBRACE RBRACE NAME SEMICOLON;
 
 arrayAssignment: NAME ‘=’ LBRACE arguments? RBRACE SEMICOLON; 
 
-// printing 
+// printing   
 printStatement: PRINT LPAREN expr RPAREN SEMICOLON;
  
 // expresions
