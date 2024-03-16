@@ -16,6 +16,7 @@ statement: variableDeclaration
            | arrayDefinition
            | arrayDeclaration
            | arrayAssignment
+           | printStatement
            ; 
 
 // variables
@@ -42,6 +43,9 @@ arrayDefinition: TYPE LBRACE RBRACE NAME ‘=’ LBRACE arguments? RBRACE SEMICO
 arrayDeclaration: TYPE LBRACE RBRACE NAME SEMICOLON; 
 
 arrayAssignment: NAME ‘=’ LBRACE arguments? RBRACE SEMICOLON; 
+
+// printing 
+printStatement: PRINT LPAREN expr RPAREN SEMICOLON;
  
 // expresions
 expr: arithmeticOperation 
@@ -174,4 +178,6 @@ RBRACK : ‘]’;
 
 COMMENT: '//' ~[\r\n]* -> skip; 
 
-FUNCTION: ‘function’; 
+FUNCTION : ‘function’; 
+
+PRINT: 'print';
