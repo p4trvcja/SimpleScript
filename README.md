@@ -1,4 +1,31 @@
 # Nazwa Języka: SimpleScript
+
+## 0. Uruchamianie:
+
+### Instalacja narzędzi:
+
+https://github.com/antlr/antlr4/blob/master/doc/getting-started.md
+
+### Tworzenie parsera i leksera
+
+```bash
+cd TKK
+antlr4 SimpleScript.g4
+javac SimpleScript*.java
+```
+
+### Testowanie
+
+```bash
+grun SimpleScript statement -tree
+```
+
+lub graficznie
+
+```bash
+grun SimpleScript statement -gui
+```
+
 ## 1. Zmienne:
 
 - Deklaracja zmiennych (jawna): typ <nazwa_zmiennej>;

@@ -6,7 +6,8 @@ script : statement+ EOF;
 // SIMPLE STATEMENTS, OPERATIONS 
 
 // statements
-statement: variableDeclaration 
+statement: expr SEMICOLON
+           | variableDeclaration 
            | variableAssignment 
            | variableDefinition 
            | conditionalStatement 
@@ -20,9 +21,9 @@ statement: variableDeclaration
            ; 
 
 // variables
-variableDeclaration : TYPE NAME (, NAME)* SEMICOLON; 
+variableDeclaration : TYPE NAME (COMMA NAME)* SEMICOLON; 
 
-variableDefinition: TYPE NAME ‘=’ expr (, NAME '=' expr)* SEMICOLON; 
+variableDefinition: TYPE NAME '=' expr (COMMA NAME '=' expr)* SEMICOLON; 
 
 variableAssignment : NAME ASSIGN expr SEMICOLON; 
 
@@ -38,18 +39,18 @@ parameters: parameter (COMMA parameter)*;
 arguments: expr (COMMA expr)*; 
 
 // arrays
-arrayDefinition: TYPE LBRACE RBRACE NAME ‘=’ LBRACE arguments? RBRACE SEMICOLON; 
+arrayDefinition: TYPE LBRACE RBRACE NAME '=' LBRACE arguments? RBRACE SEMICOLON; 
 
 arrayDeclaration: TYPE LBRACE RBRACE NAME SEMICOLON; 
 
-arrayAssignment: NAME ‘=’ LBRACE arguments? RBRACE SEMICOLON; 
+arrayAssignment: NAME '=' LBRACE arguments? RBRACE SEMICOLON; 
 
 // printing   
 printStatement: PRINT LPAREN expr RPAREN SEMICOLON;
  
 // expresions
-expr: arithmeticOperation 
-      | conditionalOperation 
+expr: expr ARITHMETIC_OP expr 
+      | expr CONDITION_OP expr 
       | singleValueOperation 
       | value 
       | functionInvocation 
@@ -57,9 +58,9 @@ expr: arithmeticOperation
       ; 
 
 // basic operations
-arithmeticOperation: expr ARITHMETIC_OP expr; 
+// arithmeticOperation: value ARITHMETIC_OP value; 
 
-conditionalOperation: expr CONDITIONAL_OP expr; 
+// conditionalOperation: value CONDITIONAL_OP value; 
 
 singleValueOperation: ('int' | 'float') (SINGLE_VAL_OP)?; 
 
@@ -94,7 +95,7 @@ iterationStatement: whileLoop
 whileLoop : WHILE LPAREN expr RPAREN LBRACE statement* RBRACE; 
 
 // for
-forLoop : FOR LPAREN variableDefinition SEMICOLON conditionalOperation SEMICOLON (singleValueOperation  | variableAssignment) RPAREN LBRACE statement* RBRACE; 
+forLoop : FOR LPAREN variableDefinition SEMICOLON expr CONDITION_OP expr  SEMICOLON (singleValueOperation  | variableAssignment) RPAREN LBRACE statement* RBRACE; 
 
 forLoopArray : FOR LPAREN parameter IN NAME RPAREN LBRACE statement* RBRACE; 
 
@@ -104,10 +105,10 @@ conditionalStatement:  ifCondition
                        ; 
 
 // if
-ifCondition : IF LPAREN conditionalOperation RPAREN LBRACE statement* RBRACE (ELIF LPAREN conditionalOperation RPAREN LBRACE statement* RBRACE)* (ELSE LBRACE statement* RBRACE)? SEMICOLON; 
+ifCondition : IF LPAREN expr CONDITION_OP expr  RPAREN LBRACE statement* RBRACE (ELIF LPAREN expr CONDITION_OP expr RPAREN LBRACE statement* RBRACE)* (ELSE LBRACE statement* RBRACE)? SEMICOLON; 
 
 //switch
-switchCondition : SWITCH LPAREN NAME RPAREN LBRACE (CASE NAME ‘:’ statement* (BREAK SEMICOLON)? )* (DEFAULT ‘:’ statement* (BREAK SEMICOLON)? )? RBRACE 
+switchCondition : SWITCH LPAREN NAME RPAREN LBRACE (CASE NAME COLON statement* (BREAK SEMICOLON)? )* (DEFAULT COLON statement* (BREAK SEMICOLON)? )? RBRACE;
 
 
 // OPERATORS, VARIABLES 
@@ -118,66 +119,78 @@ value: NAME
        | STRING	 
        ; 
 
-ARITHMETIC_OP :  ‘+’ | ‘-’ | ‘*’ | ‘/’ | ‘%’ ; 
 
-CONDITION_OP : ‘>’ | ‘>=’ | ‘<’ | ‘<=’ | ‘==’ | ‘!=’  | ‘and’ | ‘or’ | ‘not’; 
 
-SINGLE_VAL_OP : ‘++’ | ‘--’; 
+ARITHMETIC_OP :  '+' | '-' | '*' | '/' | '%' ; 
 
-ASSIGN :  ‘=’ | ‘+=’ | ‘-=’ | ‘/=’ | ‘*=’; 
+CONDITION_OP : '>' | '>=' | '<' | '<=' | '==' | '!='  | 'and' | 'or' | 'not'; 
 
-IS_NULL : ‘is null’; 
+SINGLE_VAL_OP : '++' | '--'; 
 
-IN : ‘in’; 
+ASSIGN :  '=' | '+=' | '-=' | '/=' | '*='; 
 
-IF : ‘if’; 
+IS_NULL : 'is null'; 
 
-ELIF : ‘elif’; 
+IN : 'in'; 
 
-ELSE : ‘else’; 
+IF : 'if'; 
 
-FOR : ‘for’; 
+ELIF : 'elif'; 
 
-WHILE : ‘while’; 
+ELSE : 'else'; 
 
-SWITCH : ‘switch’; 
+FOR : 'for'; 
 
-CASE : ‘case’; 
+WHILE : 'while'; 
 
-DEFAULT : ‘default’; 
+SWITCH : 'switch'; 
 
-BREAK : ‘break’; 
+CASE : 'case'; 
 
-TYPE : ‘int’ | ‘string’ | ‘char’ | ‘bool’ | ‘float’; 
+DEFAULT : 'default'; 
 
-STRING : ‘”’ (~[“])* ‘”’; 
+BREAK : 'break'; 
 
-CONCAT : ‘+’; 
+TYPE : 'int' | 'string' | 'char' | 'bool' | 'float'; 
+
+STRING : '"' (~["])* '"'; 
+
+CONCAT : '+'; 
+
+BOOLEAN : 'true' | 'false'; 
+
+SEMICOLON : ';';
+
+COMMA : ','; 
+
+COLON : ':'; 
+
+LPAREN: '('; 
+
+RPAREN: ')'; 
+
+LBRACE: '{';
+
+RBRACE: '}';
+
+LBRACK : '['; 
+
+RBRACK : ']'; 
+
+FUNCTION : 'function'; 
+
+PRINT: 'print';
+
+FIND: 'find';
+
+REVERSE: 'reverse';
+
+ADD: 'add';
+
+COMMENT: '//' ~[\r\n]* -> skip; 
+
+WS: [ \t\r\n]+ -> skip;
 
 NAME : [a-zA-Z0-9_]+ ;  
 
 NUMBER : [0-9]+ ; 
-
-BOOLEAN : ‘true’ | ‘false’; 
-
-SEMICOLON : ‘;’; 
-
-COMMA : ‘,’; 
-
-LPAREN: ‘(‘; 
-
-RPAREN: ‘)’; 
-
-LBRACE: ‘{‘;
-
-RBRACE: ‘}‘;
-
-LBRACK : ‘[‘; 
-
-RBRACK : ‘]’; 
-
-COMMENT: '//' ~[\r\n]* -> skip; 
-
-FUNCTION : ‘function’; 
-
-PRINT: 'print';
