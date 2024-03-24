@@ -29,7 +29,9 @@ variableAssignment : NAME (ASSIGNMENT | ASSIGN)  expr SEMICOLON;
 
 
 // functions
-functionDeclaration : TYPE NAME LPAREN parameters? RPAREN LBRACE statement* RBRACE SEMICOLON; 
+returnStatement : RETURN LBRACE expr RBRACE SEMICOLON;
+
+functionDeclaration : TYPE NAME LPAREN parameters? RPAREN LBRACE statement* returnStatement? RBRACE SEMICOLON; 
 
 functionInvocation: NAME LPAREN arguments? RPAREN SEMICOLON; 
 
@@ -155,7 +157,9 @@ DEFAULT : 'default';
 
 BREAK : 'break'; 
 
-TYPE : 'int' | 'string' | 'char' | 'bool' | 'float'; 
+TYPE : 'int' | 'string' | 'char' | 'bool' | 'float' | 'void'; 
+
+RETURN : 'return';
 
 STRING : '"' (~["])* '"'; 
 
