@@ -1,0 +1,22 @@
+int fun(int nazwa_1, int){
+    int x = 10;
+    int[] nazwa;
+};
+
+int [] array = [1, nazwa];
+
+string nowa_zmienna = "tekst";
+
+int x = 3;
+
+x = x - 2;
+
+for(int i = 10; i < 20; i++){
+    x+=1;
+    print("napis");
+}
+
+for(int x in array){
+    fun(x, 2.1);
+}
+
