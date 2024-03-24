@@ -12,7 +12,7 @@ statement: variableDeclaration
            | conditionalStatement 
            | iterationStatement 
            | functionDeclaration 
-           | functionInvocation
+           | functionInvocation SEMICOLON
            | arrayDefinition
            | arrayDeclaration
            | arrayAssignment
@@ -31,7 +31,7 @@ variableAssignment : NAME (ASSIGNMENT | ASSIGN)  expr SEMICOLON;
 // functions
 returnStatement : RETURN LBRACE expr RBRACE SEMICOLON;
 
-functionDeclaration : TYPE NAME LPAREN parameters? RPAREN LBRACE statement* returnStatement? RBRACE SEMICOLON; 
+functionDeclaration : (TYPE | arrayType) parameters? RPAREN LBRACE statement* returnStatement? RBRACE SEMICOLON; 
 
 functionInvocation: NAME LPAREN arguments? RPAREN SEMICOLON; 
 
@@ -42,9 +42,11 @@ parameters: parameter (COMMA parameter)*;
 arguments: expr (COMMA expr)*; 
 
 // arrays
-arrayDefinition: TYPE LBRACK RBRACK NAME ASSIGN LBRACK arguments? RBRACK SEMICOLON; 
+arrayType: TYPE LBRACK RBRACK;
 
-arrayDeclaration: TYPE LBRACK RBRACK NAME SEMICOLON; 
+arrayDefinition: arrayType NAME ASSIGN LBRACK arguments? RBRACK SEMICOLON; 
+
+arrayDeclaration: arrayType NAME SEMICOLON; 
 
 arrayAssignment: NAME ASSIGN LBRACK arguments? RBRACK SEMICOLON; 
 
