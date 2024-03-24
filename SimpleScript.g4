@@ -17,6 +17,7 @@ statement: variableDeclaration
            | arrayDeclaration
            | arrayAssignment
            | printStatement
+           | expr SEMICOLON
            ; 
 
 // variables
