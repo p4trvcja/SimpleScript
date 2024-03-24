@@ -31,7 +31,7 @@ variableAssignment : NAME (ASSIGNMENT | ASSIGN)  expr SEMICOLON;
 // functions
 returnStatement : RETURN LBRACE expr RBRACE SEMICOLON;
 
-functionDeclaration : (TYPE | arrayType) parameters? RPAREN LBRACE statement* returnStatement? RBRACE SEMICOLON; 
+functionDeclaration : (TYPE | arrayType) NAME parameters? RPAREN LBRACE statement* returnStatement? RBRACE SEMICOLON; 
 
 functionInvocation: NAME LPAREN arguments? RPAREN SEMICOLON; 
 
