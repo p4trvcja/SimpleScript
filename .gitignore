@@ -16,7 +16,7 @@
 .idea/
 *.iml
 /**/gen
-*.tokens
+# *.tokens
 out
 
 # Ignore C# regression temporaries.
@@ -31,6 +31,6 @@ antlr4-*-complete.jar
 
 # java
 
-*.java
+# *.java
 *.class
-*.interp
+# *.interp
