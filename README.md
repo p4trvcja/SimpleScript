@@ -10,12 +10,12 @@ https://github.com/antlr/antlr4/blob/master/doc/getting-started.md
 
 ```bash
 cd TKK
-antlr4 SimpleScript.g4
+antlr4 SimpleScript.g4 -visitor
 javac SimpleScript*.java
 ```
 
 ### Testowanie
-
+1. Drzewa parsera
 ```bash
 grun SimpleScript statement -tree
 ```
@@ -25,6 +25,14 @@ lub graficznie
 ```bash
 grun SimpleScript statement -gui
 ```
+
+2. Działania interpretera
+
+```bash
+javac Main.java InterpretVisitor.java
+java Main.java script.ss
+```
+gdzie script.ss to skrypt w języku SimpleScript do testowania działania interpretera
 
 ## 1. Zmienne:
 
