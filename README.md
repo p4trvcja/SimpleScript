@@ -116,8 +116,3 @@ int[] array = [1, 2, 3, 4, 5];
 print(array.reverse());
 array.add(2);
 ```
-
-# Co działa?
-
-- deklaracja zmiennych
-- definicja zmiennych
