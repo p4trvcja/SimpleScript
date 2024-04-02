@@ -220,6 +220,30 @@ public class SimpleScriptBaseListener implements SimpleScriptListener {
 	 *
 	 * <p>The default implementation does nothing.</p>
 	 */
+	@Override public void enterArithmeticOperation(SimpleScriptParser.ArithmeticOperationContext ctx) { }
+	/**
+	 * {@inheritDoc}
+	 *
+	 * <p>The default implementation does nothing.</p>
+	 */
+	@Override public void exitArithmeticOperation(SimpleScriptParser.ArithmeticOperationContext ctx) { }
+	/**
+	 * {@inheritDoc}
+	 *
+	 * <p>The default implementation does nothing.</p>
+	 */
+	@Override public void enterConditionalOperation(SimpleScriptParser.ConditionalOperationContext ctx) { }
+	/**
+	 * {@inheritDoc}
+	 *
+	 * <p>The default implementation does nothing.</p>
+	 */
+	@Override public void exitConditionalOperation(SimpleScriptParser.ConditionalOperationContext ctx) { }
+	/**
+	 * {@inheritDoc}
+	 *
+	 * <p>The default implementation does nothing.</p>
+	 */
 	@Override public void enterSingleValueOperation(SimpleScriptParser.SingleValueOperationContext ctx) { }
 	/**
 	 * {@inheritDoc}

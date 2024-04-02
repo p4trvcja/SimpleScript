@@ -177,6 +177,26 @@ public interface SimpleScriptListener extends ParseTreeListener {
 	 */
 	void exitExpr(SimpleScriptParser.ExprContext ctx);
 	/**
+	 * Enter a parse tree produced by {@link SimpleScriptParser#arithmeticOperation}.
+	 * @param ctx the parse tree
+	 */
+	void enterArithmeticOperation(SimpleScriptParser.ArithmeticOperationContext ctx);
+	/**
+	 * Exit a parse tree produced by {@link SimpleScriptParser#arithmeticOperation}.
+	 * @param ctx the parse tree
+	 */
+	void exitArithmeticOperation(SimpleScriptParser.ArithmeticOperationContext ctx);
+	/**
+	 * Enter a parse tree produced by {@link SimpleScriptParser#conditionalOperation}.
+	 * @param ctx the parse tree
+	 */
+	void enterConditionalOperation(SimpleScriptParser.ConditionalOperationContext ctx);
+	/**
+	 * Exit a parse tree produced by {@link SimpleScriptParser#conditionalOperation}.
+	 * @param ctx the parse tree
+	 */
+	void exitConditionalOperation(SimpleScriptParser.ConditionalOperationContext ctx);
+	/**
 	 * Enter a parse tree produced by {@link SimpleScriptParser#singleValueOperation}.
 	 * @param ctx the parse tree
 	 */
