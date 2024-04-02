@@ -112,6 +112,18 @@ public interface SimpleScriptVisitor<T> extends ParseTreeVisitor<T> {
 	 */
 	T visitExpr(SimpleScriptParser.ExprContext ctx);
 	/**
+	 * Visit a parse tree produced by {@link SimpleScriptParser#arithmeticOperation}.
+	 * @param ctx the parse tree
+	 * @return the visitor result
+	 */
+	T visitArithmeticOperation(SimpleScriptParser.ArithmeticOperationContext ctx);
+	/**
+	 * Visit a parse tree produced by {@link SimpleScriptParser#conditionalOperation}.
+	 * @param ctx the parse tree
+	 * @return the visitor result
+	 */
+	T visitConditionalOperation(SimpleScriptParser.ConditionalOperationContext ctx);
+	/**
 	 * Visit a parse tree produced by {@link SimpleScriptParser#singleValueOperation}.
 	 * @param ctx the parse tree
 	 * @return the visitor result

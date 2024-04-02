@@ -54,8 +54,16 @@ arrayAssignment: NAME ASSIGN LBRACK arguments? RBRACK SEMICOLON;
 printStatement: PRINT LPAREN expr RPAREN SEMICOLON;
  
 // expresions
-expr: expr ARITHMETIC_OP expr 
-      | expr CONDITION_OP expr 
+// expr: expr ARITHMETIC_OP expr 
+//       | expr CONDITION_OP expr 
+//       | singleValueOperation 
+//       | value 
+//       | functionInvocation 
+//       | stringOperation
+//       ; 
+
+expr: arithmeticOperation
+      | conditionalOperation
       | singleValueOperation 
       | value 
       | functionInvocation 
@@ -63,9 +71,9 @@ expr: expr ARITHMETIC_OP expr
       ; 
 
 // basic operations
-// arithmeticOperation: value ARITHMETIC_OP value; 
+arithmeticOperation: value ARITHMETIC_OP expr; 
 
-// conditionalOperation: value CONDITIONAL_OP value; 
+conditionalOperation: value CONDITION_OP expr; 
 
 singleValueOperation: NAME SINGLE_VAL_OP; 
 
@@ -99,12 +107,12 @@ iterationStatement: whileLoop
                     ; 
 
 //while
-whileLoop : WHILE LPAREN expr RPAREN block; 
+whileLoop : WHILE LPAREN conditionalOperation RPAREN block; 
 
 // for
-forLoop : FOR LPAREN variableDefinition expr CONDITION_OP expr SEMICOLON singleValueOperation RPAREN LBRACE statement* RBRACE; 
+forLoop : FOR LPAREN variableDefinition conditionalOperation SEMICOLON singleValueOperation RPAREN block; 
 
-forLoopArray : FOR LPAREN parameter IN NAME RPAREN LBRACE statement* RBRACE; 
+forLoopArray : FOR LPAREN parameter IN NAME RPAREN block; 
 
 // conditional statements
 conditionalStatement:  ifCondition  
@@ -112,8 +120,9 @@ conditionalStatement:  ifCondition
                        ; 
 
 // if
-ifCondition : IF LPAREN expr RPAREN block (ELIF LPAREN expr RPAREN block)* (ELSE block)?; 
+ifCondition : IF LPAREN conditionalOperation RPAREN block (ELIF LPAREN conditionalOperation RPAREN block)* (ELSE block)?; 
 
+// TODO: switch
 //switch
 switchCondition : SWITCH LPAREN NAME RPAREN LBRACE (CASE NAME COLON statement* (BREAK SEMICOLON)? )* (DEFAULT COLON statement* (BREAK SEMICOLON)? )? RBRACE;
 
