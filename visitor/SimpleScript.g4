@@ -7,7 +7,7 @@ script : statement+ EOF;
 
 // statements
 statement: variableDeclaration 
-           | variableAssignment 
+           | variableAssignment SEMICOLON
            | variableDefinition 
            | conditionalStatement 
            | iterationStatement 
@@ -25,7 +25,7 @@ variableDeclaration : TYPE NAME (COMMA NAME)* SEMICOLON;
 
 variableDefinition: TYPE NAME '=' expr (COMMA NAME '=' expr)* SEMICOLON; 
 
-variableAssignment : NAME (ASSIGNMENT | ASSIGN)  expr SEMICOLON; 
+variableAssignment : NAME (ASSIGNMENT | ASSIGN)  expr; 
 
 
 // functions
@@ -110,7 +110,7 @@ iterationStatement: whileLoop
 whileLoop : WHILE LPAREN conditionalOperation RPAREN block; 
 
 // for
-forLoop : FOR LPAREN variableDefinition conditionalOperation SEMICOLON singleValueOperation RPAREN block; 
+forLoop : FOR LPAREN variableDefinition conditionalOperation SEMICOLON (singleValueOperation | variableAssignment) RPAREN block; 
 
 forLoopArray : FOR LPAREN parameter IN NAME RPAREN block; 
 
@@ -124,7 +124,7 @@ ifCondition : IF LPAREN conditionalOperation RPAREN block (ELIF LPAREN condition
 
 // TODO: switch
 //switch
-switchCondition : SWITCH LPAREN NAME RPAREN LBRACE (CASE NAME COLON statement* (BREAK SEMICOLON)? )* (DEFAULT COLON statement* (BREAK SEMICOLON)? )? RBRACE;
+switchCondition : SWITCH LPAREN NAME RPAREN LBRACE (CASE value COLON statement* (BREAK SEMICOLON)? )* (DEFAULT COLON statement* (BREAK SEMICOLON)? )? RBRACE;
 
 
 // OPERATORS, VARIABLES 

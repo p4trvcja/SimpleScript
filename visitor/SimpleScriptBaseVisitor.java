@@ -1,4 +1,5 @@
-// Generated from SimpleScript.g4 by ANTLR 4.13.1
+// Generated from visitor/SimpleScript.g4 by ANTLR 4.13.1
+package visitor;
 import org.antlr.v4.runtime.tree.AbstractParseTreeVisitor;
 
 /**

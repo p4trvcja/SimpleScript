@@ -1,6 +1,13 @@
+package visitor;
 import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import org.antlr.v4.runtime.tree.ParseTree;
 
 public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
+    private Scope globalScope = new Scope();
+    private Scope currentScope = globalScope;
+    
     public class Variable {
         private String type;
         private Object value;
@@ -27,7 +34,66 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
         }
     }
 
+    public class Scope {
+        private final Scope parentScope;
+        private final Map<String, Object> variables;
+
+        public Scope() {
+            this(null);
+        }
+
+        public Scope(Scope parentScope) {
+            this.parentScope = parentScope;
+            this.variables = new HashMap<>();
+        }
+
+        public void setVariable(String name, Object value) {
+            variables.put(name, value);
+        }
+
+        public Object getVariable(String name) {
+            Object value = variables.get(name);
+            if (value == null && parentScope != null) {
+                return parentScope.getVariable(name);
+            }
+            return value;
+        }
+
+        public boolean variableExists(String name) {
+            return variables.containsKey(name) || (parentScope != null && parentScope.variableExists(name));
+        }
+
+        public Scope getParentScope() {
+            return parentScope;
+        }
+    }
+
+    public class FunctionInfo {
+        private final List<SimpleScriptParser.ParameterContext> parameters;
+        private final SimpleScriptParser.BlockContext block;
+        private final Scope parentScope;
+
+        public FunctionInfo(List<SimpleScriptParser.ParameterContext> parameters, SimpleScriptParser.BlockContext block, Scope parentScope) {
+            this.parameters = parameters;
+            this.block = block;
+            this.parentScope = parentScope;
+        }
+
+        public List<SimpleScriptParser.ParameterContext> getParameters() {
+            return parameters;
+        }
+
+        public SimpleScriptParser.BlockContext getBlock() {
+            return block;
+        }
+
+        public Scope getParentScope() {
+            return parentScope;
+        }
+    }
+
     HashMap<String, Variable> variables = new HashMap<>();
+    Map<String, FunctionInfo> functions = new HashMap<>();
     
 
     @Override
@@ -165,8 +231,35 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
                     return (float) left >= (float) right;
                 }
                 break;
+            case "<":
+                if (left instanceof Integer && right instanceof Integer) {
+                    return (int) left < (int) right;
+                } else if (left instanceof Float && right instanceof Float) {
+                    return (float) left < (float) right;
+                }
+                break;
+            case "<=":
+                if (left instanceof Integer && right instanceof Integer) {
+                    return (int) left <= (int) right;
+                } else if (left instanceof Float && right instanceof Float) {
+                    return (float) left <= (float) right;
+                }
+                break;
+            case "==":
+                if (left instanceof Integer && right instanceof Integer) {
+                    return (int) left == (int) right;
+                } else if (left instanceof Float && right instanceof Float) {
+                    return (float) left == (float) right;
+                }
+                break;
+            case "!=":
+                if (left instanceof Integer && right instanceof Integer) {
+                    return (int) left != (int) right;
+                } else if (left instanceof Float && right instanceof Float) {
+                    return (float) left != (float) right;
+                }
+                break;
             // Add other conditional operations as needed
-            // Handle <, <=, ==, !=
         }
 
         // If none of the cases match, return null or throw an error
@@ -192,6 +285,109 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
             return ctx.BOOLEAN().getText();
         }
         // Return null if none of the above cases match
+        return null;
+    }
+
+     @Override
+    public Object visitBlock(SimpleScriptParser.BlockContext ctx) {
+        Scope blockScope = new Scope(currentScope);
+        currentScope = blockScope;
+
+        for (SimpleScriptParser.StatementContext statement : ctx.statement()) {
+            visit(statement);
+        }
+
+        currentScope = currentScope.getParentScope();
+
+        return null;
+    }
+
+    @Override
+    public Object visitReturnStatement(SimpleScriptParser.ReturnStatementContext ctx) {
+        return visit(ctx.expr());
+    }
+
+    @Override
+    public Object visitFunctionDeclaration(SimpleScriptParser.FunctionDeclarationContext ctx) {
+        String functionName = ctx.NAME().getText();
+        List<SimpleScriptParser.ParameterContext> parameters = ctx.parameters().parameter();
+
+        SimpleScriptParser.BlockContext blockContext = null;
+        for (ParseTree child : ctx.children) {
+            if (child instanceof SimpleScriptParser.BlockContext) {
+                blockContext = (SimpleScriptParser.BlockContext) child;
+                break;
+            }
+        }
+
+        if (blockContext == null) {
+            throw new RuntimeException("Block context not found within FunctionDeclarationContext.");
+        }
+
+        Scope functionScope = new Scope(currentScope);
+        currentScope = functionScope;
+
+        visitBlock(blockContext);
+
+        FunctionInfo functionInfo = new FunctionInfo(parameters, blockContext, currentScope);
+        functions.put(functionName, functionInfo);
+        currentScope = currentScope.getParentScope();
+
+        return null;
+    }
+
+    @Override
+    public Object visitFunctionInvocation(SimpleScriptParser.FunctionInvocationContext ctx) {
+        String functionName = ctx.NAME().getText();
+
+        visit(ctx.arguments());
+
+        return executeFunction(functionName);
+    }
+
+    @Override
+    public Object visitParameter(SimpleScriptParser.ParameterContext ctx) {
+        String parameterName = ctx.NAME().getText();
+        currentScope.setVariable(parameterName, null); // Parameters are initially set to null
+        return null;
+    }
+
+    @Override
+    public Object visitParameters(SimpleScriptParser.ParametersContext ctx) {
+        for (SimpleScriptParser.ParameterContext parameterContext : ctx.parameter()) {
+            visit(parameterContext);
+        }
+        return null;
+    }
+
+    @Override
+    public Object visitArguments(SimpleScriptParser.ArgumentsContext ctx) {
+        for (SimpleScriptParser.ExprContext exprContext : ctx.expr()) {
+            visit(exprContext);
+        }
+        return null;
+    }
+
+
+    private Object executeFunction(String functionName) {
+        FunctionInfo functionInfo = (FunctionInfo) globalScope.getVariable(functionName);
+        if (functionInfo == null) {
+            throw new RuntimeException("Function '" + functionName + "' is not defined.");
+        }
+
+        Scope functionScope = new Scope(functionInfo.getParentScope());
+        List<SimpleScriptParser.ParameterContext> parameters = functionInfo.getParameters();
+        for (SimpleScriptParser.ParameterContext parameter : parameters) {
+            String paramName = parameter.NAME().getText();
+            functionScope.setVariable(paramName, null);
+        }
+
+        currentScope = functionScope;
+
+        visit(functionInfo.getBlock());
+
+        currentScope = currentScope.getParentScope();
+
         return null;
     }
 }
