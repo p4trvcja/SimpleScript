@@ -62,16 +62,28 @@ printStatement: PRINT LPAREN expr RPAREN SEMICOLON;
 //       | stringOperation
 //       ; 
 
-expr: arithmeticOperation
+expr: value 
+      | arithmeticOperation
       | conditionalOperation
       | singleValueOperation 
-      | value 
       | functionInvocation 
       | stringOperation
       ; 
 
 // basic operations
-arithmeticOperation: value ARITHMETIC_OP expr; 
+arithmeticOperation: term
+    | arithmeticOperation CONCAT term
+    | arithmeticOperation SUB term
+    ;
+
+term: factor
+    | term MUL factor
+    | term DIV factor
+    ;
+
+factor: value
+      | '(' expr ')'
+      ;
 
 conditionalOperation: value CONDITION_OP expr; 
 
@@ -136,11 +148,19 @@ value: NAME
        ; 
 
 
+CONCAT: '+';
+
+SUB: '-';
+
+MUL: '*';
+
+DIV: '/';
+
 ASSIGNMENT:  '+=' | '-=' | '/=' | '*='; 
 
 ASSIGN: '=';
 
-ARITHMETIC_OP :  '+' | '-' | '*' | '/' | '%' ; 
+// ARITHMETIC_OP :  '+' | '-' | '*' | '/' | '%' ; 
 
 CONDITION_OP : '>' | '>=' | '<' | '<=' | '==' | '!='  | 'and' | 'or' | 'not'; 
 
@@ -173,8 +193,6 @@ TYPE : 'int' | 'string' | 'char' | 'bool' | 'float' | 'void';
 RETURN : 'return';
 
 STRING : '"' (~["])* '"'; 
-
-CONCAT : '+'; 
 
 BOOLEAN : 'true' | 'false'; 
 
