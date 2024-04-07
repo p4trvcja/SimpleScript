@@ -33,7 +33,7 @@ returnStatement : RETURN LPAREN expr RPAREN SEMICOLON;
 
 functionDeclaration : (TYPE | arrayType) NAME LPAREN ((TYPE | arrayType) NAME ((COMMA (TYPE | arrayType) NAME)*))? RPAREN LBRACE statement* returnStatement? RBRACE SEMICOLON;
 
-functionInvocation: NAME LPAREN expr ((COMMA expr)*)? RPAREN;
+functionInvocation: NAME LPAREN expr (COMMA expr)* RPAREN;
 
 parameter: TYPE NAME; 
 
