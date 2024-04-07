@@ -169,23 +169,33 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
 
     @Override
     public Object visitArithmeticOperation(SimpleScriptParser.ArithmeticOperationContext ctx) {
-        Object left = visit(ctx.value());
-        Object right = visit(ctx.expr());
-        String op = ctx.ARITHMETIC_OP().getText();
-
+        Object right = visit(ctx.term());
+        Object left = null;
+        String op = null;
+    
+        if (ctx.getChildCount() > 1) {
+            op = ctx.getChild(1).getText();
+            left = visit(ctx.arithmeticOperation());
+        }
+    
         try {
-            left = Integer.parseInt(String.valueOf(left));
             right = Integer.parseInt(String.valueOf(right));
+            if (left != null)
+                left = Integer.parseInt(String.valueOf(left));
         } catch (NumberFormatException e) {
             try {
                 left = Float.parseFloat(String.valueOf(left));
-                right = Float.parseFloat(String.valueOf(right));
+                if (right != null)
+                    right = Float.parseFloat(String.valueOf(right));
             } catch (NumberFormatException ex) {
-                throw new RuntimeException("Operands are not a valid numbers: " + left);
+                throw new RuntimeException("Operands are not valid numbers");
             }
         }
 
         // Perform the arithmetic operation based on the operator
+        if (op == null) {
+            return right;
+        }
         switch (op) {
             case "+":
                 if (left instanceof Integer && right instanceof Integer) {
