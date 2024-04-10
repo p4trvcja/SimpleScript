@@ -91,8 +91,15 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
         for (int i = 0; i < ctx.NAME().size(); i++) {
             String name = ctx.NAME(i).getText();
             Object value = visit(ctx.expr(i));
+
+            if (variables.get(currentInstruction).containsKey((String) value)) {
+                value = variables.get(currentInstruction).get((String) value).getValue();
+            } else if (variables.get(0).containsKey((String) value)) {
+                value = variables.get(0).get((String) value).getValue();
+            }
+
             Variable variable = new Variable(type, value);
-            variables.get(0).put(name, variable);
+            variables.get(currentInstruction).put(name, variable);
             System.out.println("Variable '" + name + "' of type '" + type + "' defined with value: " + value);
         }
         return null;
@@ -104,7 +111,7 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
         for (int i = 0; i < ctx.NAME().size(); i++) {
             String name = ctx.NAME(i).getText();
             Variable variable = new Variable(type, null); // Initialize with null value
-            variables.get(0).put(name, variable);
+            variables.get(currentInstruction).put(name, variable);
             System.out.println("Variable '" + name + "' of type '" + type + "' declared");
         }
         return null;
@@ -114,11 +121,21 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
     public Void visitVariableAssignment(SimpleScriptParser.VariableAssignmentContext ctx) {
         String name = ctx.NAME().getText();
         Object value = visit(ctx.expr());
+
+        if (variables.get(currentInstruction).containsKey((String) value)) {
+            value = variables.get(currentInstruction).get((String) value).getValue();
+        } else if (variables.get(0).containsKey((String) value)) {
+            value = variables.get(0).get((String) value).getValue();
+        }
+
+        System.out.println("Name: " + name);
+        System.out.println("Value: " + value);
+
         Map<String, Variable> localVariables = variables.get(currentInstruction);
 
         if (Objects.nonNull(localVariables) && Objects.nonNull(localVariables.get(name))) {
             Variable variable = new Variable(localVariables.get(name).getType(), value);
-            localVariables.put(name, variable);
+            variables.get(currentInstruction).put(name, variable);
             System.out.println("Variable '" + name + "' assigned value: " + value);
         } else {
             System.err.println("Error: Variable '" + name + "' has not been declared");
@@ -174,7 +191,10 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
             right = Integer.parseInt(String.valueOf(right));
             if (left != null)
                 left = Integer.parseInt(String.valueOf(left));
+
         } catch (NumberFormatException e) {
+            System.out.println("Left: " + left);
+            System.out.println("Right: " + right);
             try {
                 left = Float.parseFloat(String.valueOf(left));
                 if (right != null)
@@ -320,14 +340,7 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
             }
         }
 
-        List<SimpleScriptParser.StatementContext> blockContext = new ArrayList<>();
-
-        for (ParseTree child : ctx.children) {
-            if (child instanceof SimpleScriptParser.StatementContext) {
-                blockContext.add((SimpleScriptParser.StatementContext) child);
-                break;
-            }
-        }
+        List<SimpleScriptParser.StatementContext> blockContext = ctx.statement();
 
         if (blockContext.isEmpty()) {
             throw new RuntimeException("Block context not found within FunctionDeclarationContext.");
@@ -335,8 +348,12 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
 
         FunctionInfo functionInfo = new FunctionInfo(returnType, blockContext);
 
+        currentInstruction = functionInfo.functionID;
+
         variables.put(functionInfo.functionID, parameters);
         functions.put(functionName, functionInfo);
+
+        currentInstruction = 0;
 
         return null;
     }
@@ -354,12 +371,10 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
             argument.getValue().setValue(visit(ctx.expr(idx++)));
         }
 
-        System.out.println(functionInfo);
-
-        for (var m : variables.entrySet()) {
-            System.out.println(m.getKey() + ": ");
-            System.out.println(m.getValue());
-        }
+//        for (var m : variables.entrySet()) {
+//            System.out.println(m.getKey() + ": ");
+//            System.out.println(m.getValue());
+//        }
 
         return executeFunction(functionName);
     }
@@ -377,6 +392,12 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
         }
 
         currentInstruction = 0;
+
+
+        for (var m : variables.entrySet()) {
+            System.out.println(m.getKey() + ": ");
+            System.out.println(m.getValue());
+        }
 
         return null;
     }
