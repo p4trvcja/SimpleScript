@@ -79,8 +79,6 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
         }
     }
 
-    // HashMap<String, Variable> variables = new HashMap<>();
-
     public Map<Integer, Map<String, Variable>> getVariables() {
         return variables;
     }
@@ -92,15 +90,15 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
             String name = ctx.NAME(i).getText();
             Object value = visit(ctx.expr(i));
 
-            if (variables.get(currentInstruction).containsKey((String) value)) {
-                value = variables.get(currentInstruction).get((String) value).getValue();
-            } else if (variables.get(0).containsKey((String) value)) {
-                value = variables.get(0).get((String) value).getValue();
+            if (variables.get(currentInstruction).containsKey(value)) {
+                value = variables.get(currentInstruction).get(value).getValue();
+            } else if (variables.get(0).containsKey(value)) {
+                value = variables.get(0).get(value).getValue();
             }
 
             Variable variable = new Variable(type, value);
             variables.get(currentInstruction).put(name, variable);
-            System.out.println("Variable '" + name + "' of type '" + type + "' defined with value: " + value);
+            // System.out.println("Variable '" + name + "' of type '" + type + "' defined with value: " + value);
         }
         return null;
     }
@@ -112,7 +110,7 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
             String name = ctx.NAME(i).getText();
             Variable variable = new Variable(type, null); // Initialize with null value
             variables.get(currentInstruction).put(name, variable);
-            System.out.println("Variable '" + name + "' of type '" + type + "' declared");
+            // System.out.println("Variable '" + name + "' of type '" + type + "' declared");
         }
         return null;
     }
@@ -122,21 +120,18 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
         String name = ctx.NAME().getText();
         Object value = visit(ctx.expr());
 
-        if (variables.get(currentInstruction).containsKey((String) value)) {
-            value = variables.get(currentInstruction).get((String) value).getValue();
-        } else if (variables.get(0).containsKey((String) value)) {
-            value = variables.get(0).get((String) value).getValue();
+        if (variables.get(currentInstruction).containsKey(value)) {
+            value = variables.get(currentInstruction).get(value).getValue();
+        } else if (variables.get(0).containsKey(value)) {
+            value = variables.get(0).get(value).getValue();
         }
-
-        System.out.println("Name: " + name);
-        System.out.println("Value: " + value);
 
         Map<String, Variable> localVariables = variables.get(currentInstruction);
 
         if (Objects.nonNull(localVariables) && Objects.nonNull(localVariables.get(name))) {
             Variable variable = new Variable(localVariables.get(name).getType(), value);
             variables.get(currentInstruction).put(name, variable);
-            System.out.println("Variable '" + name + "' assigned value: " + value);
+            // System.out.println("Variable '" + name + "' assigned value: " + value);
         } else {
             System.err.println("Error: Variable '" + name + "' has not been declared");
         }
@@ -177,6 +172,58 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
     }
 
     @Override
+    public Object visitTerm(SimpleScriptParser.TermContext ctx) {
+        Object result = visit(ctx.factor()); // Odwiedź pierwszy czynnik
+
+        if (variables.get(currentInstruction).containsKey(result)) {
+            result = variables.get(currentInstruction).get(result).getValue();
+        } else if (variables.get(0).containsKey(result)) {
+            result = variables.get(0).get(result).getValue();
+        }
+
+        if (ctx.term() != null) {
+            Object nextFactorResult = visit(ctx.term());
+            if (ctx.MUL() != null) {
+                result = multiply(result, nextFactorResult);
+            } else if (ctx.DIV() != null) {
+                result = divide(result, nextFactorResult);
+            }
+        }
+
+        return result;
+    }
+
+    @Override
+    public Object visitFactor(SimpleScriptParser.FactorContext ctx) {
+        if (ctx.value() != null) {
+            return visit(ctx.value());
+        } else if (ctx.expr() != null) {
+            return visit(ctx.expr());
+        } else {
+            throw new IllegalArgumentException("Incorrect factor context");
+        }
+    }
+
+    private Object multiply(Object a, Object b) {
+        if (a instanceof Integer && b instanceof Integer) {
+            return (Integer) a * (Integer) b;
+        } else {
+            throw new IllegalArgumentException("Incorrect arguments for multiplication");
+        }
+    }
+
+    private Object divide(Object a, Object b) {
+        if (a instanceof Integer && b instanceof Integer) {
+            if ((Integer) b == 0) {
+                throw new ArithmeticException("Division by zero");
+            }
+            return (Integer) a / (Integer) b;
+        } else {
+            throw new IllegalArgumentException("Incorrect arguments for division");
+        }
+    }
+
+    @Override
     public Object visitArithmeticOperation(SimpleScriptParser.ArithmeticOperationContext ctx) {
         Object right = visit(ctx.term());
         Object left = null;
@@ -186,7 +233,7 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
             op = ctx.getChild(1).getText();
             left = visit(ctx.arithmeticOperation());
         }
-    
+
         try {
             right = Integer.parseInt(String.valueOf(right));
             if (left != null)
@@ -371,11 +418,6 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
             argument.getValue().setValue(visit(ctx.expr(idx++)));
         }
 
-//        for (var m : variables.entrySet()) {
-//            System.out.println(m.getKey() + ": ");
-//            System.out.println(m.getValue());
-//        }
-
         return executeFunction(functionName);
     }
 
@@ -392,7 +434,6 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
         }
 
         currentInstruction = 0;
-
 
         for (var m : variables.entrySet()) {
             System.out.println(m.getKey() + ": ");
