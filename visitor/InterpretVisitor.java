@@ -1,7 +1,7 @@
 package visitor;
 import java.util.*;
 
-import org.antlr.v4.runtime.tree.ParseTree;
+// import org.antlr.v4.runtime.tree.ParseTree;
 
 public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
     private int currentInstruction = 0;
@@ -205,19 +205,48 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
     }
 
     private Object multiply(Object a, Object b) {
+        try {
+            a = Integer.parseInt(String.valueOf(a));
+            b = Integer.parseInt(String.valueOf(b));
+
+        } catch (NumberFormatException e) {
+            System.out.println("Left: " + a);
+            System.out.println("Right: " + b);
+            try {
+                a = Float.parseFloat(String.valueOf(a));
+                b = Float.parseFloat(String.valueOf(b));
+            } catch (NumberFormatException ex) {
+                throw new RuntimeException("Operands are not valid numbers");
+            }
+        }
         if (a instanceof Integer && b instanceof Integer) {
-            return (Integer) a * (Integer) b;
+            return (int) b * (int) a;
         } else {
             throw new IllegalArgumentException("Incorrect arguments for multiplication");
         }
     }
 
+
     private Object divide(Object a, Object b) {
+        try {
+            a = Integer.parseInt(String.valueOf(a));
+            b = Integer.parseInt(String.valueOf(b));
+
+        } catch (NumberFormatException e) {
+            System.out.println("Left: " + a);
+            System.out.println("Right: " + b);
+            try {
+                a = Float.parseFloat(String.valueOf(a));
+                b = Float.parseFloat(String.valueOf(b));
+            } catch (NumberFormatException ex) {
+                throw new RuntimeException("Operands are not valid numbers");
+            }
+        }
         if (a instanceof Integer && b instanceof Integer) {
-            if ((Integer) b == 0) {
+            if ((int) b == 0) {
                 throw new ArithmeticException("Division by zero");
             }
-            return (Integer) a / (Integer) b;
+            return (int) b / (int) a;
         } else {
             throw new IllegalArgumentException("Incorrect arguments for division");
         }

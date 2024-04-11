@@ -1,7 +1,3 @@
-int x = 10;
-x = 5;
-string b = "sawawd";
-print(x);
-print(b);
-x = 1-2+3;
+int y = 7;
+int x = 2+10*(y-3)-11;
 print(x);
