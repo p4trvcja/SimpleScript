@@ -90,13 +90,10 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
             String name = ctx.NAME(i).getText();
             Object value = visit(ctx.expr(i));
 
-            if (variables.get(currentInstruction).containsKey(value)) {
-                value = variables.get(currentInstruction).get(value).getValue();
-            } else if (variables.get(0).containsKey(value)) {
-                value = variables.get(0).get(value).getValue();
-            }
+            value = sourceVariable((String) value);
 
             Variable variable = new Variable(type, value);
+            
             variables.get(currentInstruction).put(name, variable);
             // System.out.println("Variable '" + name + "' of type '" + type + "' defined with value: " + value);
         }
@@ -120,11 +117,7 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
         String name = ctx.NAME().getText();
         Object value = visit(ctx.expr());
 
-        if (variables.get(currentInstruction).containsKey(value)) {
-            value = variables.get(currentInstruction).get(value).getValue();
-        } else if (variables.get(0).containsKey(value)) {
-            value = variables.get(0).get(value).getValue();
-        }
+        value = sourceVariable((String) value);
 
         Map<String, Variable> localVariables = variables.get(currentInstruction);
 
@@ -175,11 +168,7 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
     public Object visitTerm(SimpleScriptParser.TermContext ctx) {
         Object result = visit(ctx.factor()); // Odwiedź pierwszy czynnik
 
-        if (variables.get(currentInstruction).containsKey(result)) {
-            result = variables.get(currentInstruction).get(result).getValue();
-        } else if (variables.get(0).containsKey(result)) {
-            result = variables.get(0).get(result).getValue();
-        }
+        result = sourceVariable((String) result);
 
         if (ctx.term() != null) {
             Object nextFactorResult = visit(ctx.term());
@@ -210,8 +199,6 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
             b = Integer.parseInt(String.valueOf(b));
 
         } catch (NumberFormatException e) {
-            System.out.println("Left: " + a);
-            System.out.println("Right: " + b);
             try {
                 a = Float.parseFloat(String.valueOf(a));
                 b = Float.parseFloat(String.valueOf(b));
@@ -313,7 +300,16 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
         Object right = visit(ctx.expr());
         String op = ctx.CONDITION_OP().getText();
 
-        // Perform the conditional operation based on the operator
+        left = sourceVariable((String) left);
+        right = sourceVariable((String) right);
+
+        try {
+            left = parseValue((String) left);
+            right = parseValue((String) right);
+        } catch (NumberFormatException e) {
+            return null;
+        }
+
         switch (op) {
             case ">":
                 if (left instanceof Integer && right instanceof Integer) {
@@ -357,10 +353,30 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
                     return (float) left != (float) right;
                 }
                 break;
-            // Add other conditional operations as needed
+            case "and":
+                if (left instanceof Boolean && right instanceof Boolean) {
+                    return (boolean) left && (boolean) right;
+                } else if (left instanceof Integer && right instanceof Integer) {
+                    return ((int) left != 0) && ((int) right != 0);
+                } else if (left instanceof Boolean && right instanceof Integer) {
+                    return (boolean) left && ((int) right != 0);
+                } else if (left instanceof Integer && right instanceof Boolean) {
+                    return ((int) left != 0) && (boolean) right;
+                }
+                break;
+            case "or":
+                if (left instanceof Boolean && right instanceof Boolean) {
+                    return (boolean) left || (boolean) right;
+                } else if (left instanceof Integer && right instanceof Integer) {
+                    return ((int) left != 0) || ((int) right != 0);
+                } else if (left instanceof Boolean && right instanceof Integer) {
+                    return (boolean) left || ((int) right != 0);
+                } else if (left instanceof Integer && right instanceof Boolean) {
+                    return ((int) left != 0) || (boolean) right;
+                }
+                break;
         }
 
-        // If none of the cases match, return null or throw an error
         return null;
     }
     
@@ -467,6 +483,33 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
         for (var m : variables.entrySet()) {
             System.out.println(m.getKey() + ": ");
             System.out.println(m.getValue());
+        }
+
+        return null;
+    }
+
+    private Object sourceVariable(String variable) {
+
+        if (variables.get(currentInstruction).containsKey(variable)) {
+             return variables.get(currentInstruction).get(variable).getValue();
+        } else if (variables.get(0).containsKey(variable)) {
+             return variables.get(0).get(variable).getValue();
+        }
+
+        return variable;
+    }
+
+    private Object parseValue(String value) {
+        try {
+            return Integer.parseInt(value);
+        } catch (NumberFormatException e1) {
+            try {
+                return Float.parseFloat(value);
+            } catch (NumberFormatException e2) {
+                if ("true".equalsIgnoreCase(value) || "false".equalsIgnoreCase(value)) {
+                    return Boolean.parseBoolean(value);
+                }
+            }
         }
 
         return null;
