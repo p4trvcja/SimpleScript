@@ -85,7 +85,21 @@ factor: value
       | '(' expr ')'
       ;
 
-conditionalOperation: value CONDITION_OP expr; 
+conditionalOperation: logicalTerm
+            | conditionalOperation CONDITION_OP logicalTerm;
+
+logicalTerm: logicalFactor
+            | logicalTerm OR logicalFactor
+            ;
+
+logicalFactor: logicalPrimary
+             | logicalFactor AND logicalPrimary
+             ;
+
+logicalPrimary: value
+              | '(' conditionalOperation ')'
+              | NOT logicalPrimary
+              ;
 
 singleValueOperation: NAME SINGLE_VAL_OP; 
 
@@ -162,7 +176,13 @@ ASSIGN: '=';
 
 // ARITHMETIC_OP :  '+' | '-' | '*' | '/' | '%' ; 
 
-CONDITION_OP : '>' | '>=' | '<' | '<=' | '==' | '!='  | 'and' | 'or' | 'not'; 
+CONDITION_OP : '>' | '>=' | '<' | '<=' | '==' | '!=';
+
+AND: 'and';
+
+OR: 'or';
+
+NOT: 'not';
 
 SINGLE_VAL_OP : '++' | '--'; 
 
