@@ -1,8 +1,6 @@
 package visitor;
 import java.util.*;
 
-// import org.antlr.v4.runtime.tree.ParseTree;
-
 public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
     private int currentInstruction = 0;
     private final Map<String, FunctionInfo> functions = new HashMap<>();
@@ -13,7 +11,7 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
         variables.put(0, new HashMap<>());
     }
     
-    public class Variable {
+    public static class Variable {
         private String type;
         private Object value;
     
@@ -47,7 +45,7 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
         }
     }
 
-    public class FunctionInfo {
+    public static class FunctionInfo {
         private static int ID = 1;
         private final String returnType;
         private final List<SimpleScriptParser.StatementContext> block;
@@ -86,29 +84,32 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
     @Override
     public Void visitVariableDefinition(SimpleScriptParser.VariableDefinitionContext ctx) {
         String type = ctx.TYPE().getText();
+
         for (int i = 0; i < ctx.NAME().size(); i++) {
             String name = ctx.NAME(i).getText();
             Object value = visit(ctx.expr(i));
 
-            value = sourceVariable((String) value);
+            if (value instanceof String)
+                value = sourceVariable((String) value);
 
             Variable variable = new Variable(type, value);
             
             variables.get(currentInstruction).put(name, variable);
-            // System.out.println("Variable '" + name + "' of type '" + type + "' defined with value: " + value);
         }
+
         return null;
     }
 
     @Override
     public Void visitVariableDeclaration(SimpleScriptParser.VariableDeclarationContext ctx) {
         String type = ctx.TYPE().getText();
+
         for (int i = 0; i < ctx.NAME().size(); i++) {
             String name = ctx.NAME(i).getText();
-            Variable variable = new Variable(type, null); // Initialize with null value
+            Variable variable = new Variable(type, null);
             variables.get(currentInstruction).put(name, variable);
-            // System.out.println("Variable '" + name + "' of type '" + type + "' declared");
         }
+
         return null;
     }
 
@@ -124,7 +125,6 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
         if (Objects.nonNull(localVariables) && Objects.nonNull(localVariables.get(name))) {
             Variable variable = new Variable(localVariables.get(name).getType(), value);
             variables.get(currentInstruction).put(name, variable);
-            // System.out.println("Variable '" + name + "' assigned value: " + value);
         } else {
             System.err.println("Error: Variable '" + name + "' has not been declared");
         }
@@ -159,14 +159,13 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
         } else if (ctx.stringOperation() != null) {
             return visitStringOperation(ctx.stringOperation());
         } else {
-            // Handle other cases as needed
             return null;
         }
     }
 
     @Override
     public Object visitTerm(SimpleScriptParser.TermContext ctx) {
-        Object result = visit(ctx.factor()); // Odwiedź pierwszy czynnik
+        Object result = visit(ctx.factor());
 
         result = sourceVariable((String) result);
 
@@ -220,8 +219,6 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
             b = Integer.parseInt(String.valueOf(b));
 
         } catch (NumberFormatException e) {
-            System.out.println("Left: " + a);
-            System.out.println("Right: " + b);
             try {
                 a = Float.parseFloat(String.valueOf(a));
                 b = Float.parseFloat(String.valueOf(b));
@@ -256,8 +253,6 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
                 left = Integer.parseInt(String.valueOf(left));
 
         } catch (NumberFormatException e) {
-            System.out.println("Left: " + left);
-            System.out.println("Right: " + right);
             try {
                 left = Float.parseFloat(String.valueOf(left));
                 if (right != null)
@@ -267,7 +262,6 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
             }
         }
 
-        // Perform the arithmetic operation based on the operator
         if (op == null) {
             return right;
         }
@@ -286,28 +280,47 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
                     return (float) left - (float) right;
                 }
                 break;
-            // Add other arithmetic operations as needed
-            // Handle multiplication, division, etc.
         }
 
-        // If none of the cases match, return null or throw an error
         return null;
     }
 
     @Override
     public Object visitConditionalOperation(SimpleScriptParser.ConditionalOperationContext ctx) {
-        Object left = visit(ctx.value());
-        Object right = visit(ctx.expr());
-        String op = ctx.CONDITION_OP().getText();
+        Object right = visit(ctx.logicalTerm());
+        Object left = null;
+        String op = null;
 
-        left = sourceVariable((String) left);
-        right = sourceVariable((String) right);
+        if (ctx.getChildCount() > 1) {
+            op = ctx.getChild(1).getText();
+            left = visit(ctx.conditionalOperation());
+        }
 
-        try {
-            left = parseValue((String) left);
-            right = parseValue((String) right);
-        } catch (NumberFormatException e) {
-            return null;
+        if (left instanceof String)
+            left = sourceVariable((String) left);
+
+        if (right instanceof String)
+            right = sourceVariable((String) right);
+
+        if (left instanceof String) {
+            try {
+                left = parseValue((String) left);
+            } catch (NumberFormatException e) {
+                return null;
+            }
+        }
+
+        if (right instanceof String) {
+            try {
+                right = parseValue((String) right);
+            } catch (NumberFormatException e) {
+                return null;
+            }
+        }
+
+
+        if (op == null) {
+            return right;
         }
 
         switch (op) {
@@ -353,28 +366,78 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
                     return (float) left != (float) right;
                 }
                 break;
-            case "and":
-                if (left instanceof Boolean && right instanceof Boolean) {
-                    return (boolean) left && (boolean) right;
-                } else if (left instanceof Integer && right instanceof Integer) {
-                    return ((int) left != 0) && ((int) right != 0);
-                } else if (left instanceof Boolean && right instanceof Integer) {
-                    return (boolean) left && ((int) right != 0);
-                } else if (left instanceof Integer && right instanceof Boolean) {
-                    return ((int) left != 0) && (boolean) right;
+        }
+
+        return null;
+    }
+
+    @Override
+    public Object visitLogicalTerm(SimpleScriptParser.LogicalTermContext ctx) {
+        Object result = visit(ctx.logicalFactor());
+
+        if (result instanceof String) {
+            result = sourceVariable((String) result);
+        }
+
+        if (ctx.logicalTerm() != null) {
+            Object nextFactorResult = visit(ctx.logicalTerm());
+
+            if (ctx.OR() != null) {
+
+                try {
+                    boolean boolResult = result instanceof String ? (boolean) parseValue((String) result) : (boolean) result;
+                    boolean nextBoolResult = nextFactorResult instanceof String ? (boolean) parseValue((String) nextFactorResult) : (boolean) nextFactorResult;
+                    result = boolResult || nextBoolResult;
+                } catch (NumberFormatException e) {
+                    System.out.println("Invalid boolean value");
                 }
-                break;
-            case "or":
-                if (left instanceof Boolean && right instanceof Boolean) {
-                    return (boolean) left || (boolean) right;
-                } else if (left instanceof Integer && right instanceof Integer) {
-                    return ((int) left != 0) || ((int) right != 0);
-                } else if (left instanceof Boolean && right instanceof Integer) {
-                    return (boolean) left || ((int) right != 0);
-                } else if (left instanceof Integer && right instanceof Boolean) {
-                    return ((int) left != 0) || (boolean) right;
+            }
+        }
+
+        return result;
+    }
+
+    @Override
+    public Object visitLogicalFactor(SimpleScriptParser.LogicalFactorContext ctx) {
+        Object result = visit(ctx.logicalPrimary());
+
+        if (result instanceof String)
+            result = sourceVariable((String) result);
+
+        if (ctx.logicalFactor() != null) {
+            Object nextFactorResult = visit(ctx.logicalFactor());
+
+            if (ctx.AND() != null) {
+                try {
+                    boolean boolResult = result instanceof String ? (boolean) parseValue((String) result) : (boolean) result;
+                    boolean nextBoolResult = nextFactorResult instanceof String ? (boolean) parseValue((String) nextFactorResult) : (boolean) nextFactorResult;
+                    result = boolResult && nextBoolResult;
+                } catch (NumberFormatException e) {
+                    System.out.println("Invalid boolean value");
                 }
-                break;
+            }
+        }
+
+        return result;
+    }
+
+    @Override
+    public Object visitLogicalPrimary(SimpleScriptParser.LogicalPrimaryContext ctx) {
+        if (ctx.value() != null) {
+            return visit(ctx.value());
+
+        } else if (ctx.logicalPrimary() != null) {
+            Object result = visit(ctx.logicalPrimary());
+
+            try {
+                boolean boolResult = result instanceof String ? (boolean) parseValue((String) result) : (boolean) result;
+                return !boolResult;
+            } catch (NumberFormatException e) {
+                System.out.println("Invalid boolean value");
+            }
+
+        } else if (ctx.conditionalOperation() != null) {
+            return visit(ctx.conditionalOperation());
         }
 
         return null;
@@ -382,23 +445,17 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
     
     @Override
     public Object visitValue(SimpleScriptParser.ValueContext ctx) {
-        // Depending on the type of value, handle it accordingly
         if (ctx.NAME() != null) {
-            // If it's a variable, you need to fetch its value from somewhere
-            // For now, let's just return its name
             return ctx.NAME().getText();
         } else if (ctx.STRING() != null) {
-            // If it's a string, return its text (without quotes)
             String text = ctx.STRING().getText();
             return text.substring(1, text.length() - 1);
         } else if (ctx.NUMBER() != null) {
-            // If it's a number, return its text
             return ctx.NUMBER().getText();
         } else if (ctx.BOOLEAN() != null) {
-            // If it's a boolean, return its text
             return ctx.BOOLEAN().getText();
         }
-        // Return null if none of the above cases match
+
         return null;
     }
 
@@ -480,11 +537,6 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
 
         currentInstruction = 0;
 
-        for (var m : variables.entrySet()) {
-            System.out.println(m.getKey() + ": ");
-            System.out.println(m.getValue());
-        }
-
         return null;
     }
 
@@ -512,6 +564,6 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
             }
         }
 
-        return null;
+        throw new NullPointerException();
     }
 }
