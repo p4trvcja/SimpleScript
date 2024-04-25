@@ -4,7 +4,7 @@ import java.util.*;
 public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
     private int currentInstruction = 0;
     private final Map<String, FunctionInfo> functions = new HashMap<>();
-    private final Map<Integer, Map<String, Variable>> variables = new HashMap<>();
+    public Map<Integer, Map<String, Variable>> variables = new HashMap<>();
 
     public InterpretVisitor() {
         super();
@@ -50,6 +50,8 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
         private final String returnType;
         private final List<SimpleScriptParser.StatementContext> block;
         private final int functionID = ID++;
+        // private boolean returnFlag = false;
+        // private Object returnResult = null;
 
         public FunctionInfo(String returnType, List<SimpleScriptParser.StatementContext> block) {
             this.returnType = returnType;
@@ -75,6 +77,10 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
                     ", block=" + block +
                     '}';
         }
+    }
+
+    public void setVariables(Map<Integer, Map<String, Variable>> variables) {
+        this.variables = variables;
     }
 
     public Map<Integer, Map<String, Variable>> getVariables() {
@@ -474,7 +480,13 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
 
     @Override
     public Object visitReturnStatement(SimpleScriptParser.ReturnStatementContext ctx) {
-        return visit(ctx.expr());
+        // Object returnValue = visit(ctx.expr());
+        // Set a flag to indicate that a return statement has been encountered
+        // returnFlag = true;
+        // // Store the return value
+        // returnResult = returnValue;
+        // Return null as we don't need to continue visiting the rest of the statements
+        return null;
     }
 
     @Override

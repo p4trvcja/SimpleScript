@@ -5,10 +5,12 @@ import org.antlr.v4.runtime.CharStreams;
 import org.antlr.v4.runtime.CodePointCharStream;
 import org.antlr.v4.runtime.CommonTokenStream;
 import org.antlr.v4.runtime.tree.ParseTree;
+import org.antlr.v4.runtime.tree.ParseTreeWalker;
 
 import visitor.InterpretVisitor;
 import visitor.SimpleScriptLexer;
 import visitor.SimpleScriptParser;
+import visitor.InterpretListener;
 
 public class Main{
     public static void main(String[] args) throws Exception {
@@ -27,7 +29,11 @@ public class Main{
         SimpleScriptParser parser = new SimpleScriptParser(tokens);
         ParseTree tree = parser.script();
 
+        InterpretListener listener = new InterpretListener();
+        ParseTreeWalker.DEFAULT.walk(listener, tree);
+
         InterpretVisitor interpreter = new InterpretVisitor();
+        interpreter.setVariables(listener.getVariables());
         interpreter.visit(tree);
     }
 

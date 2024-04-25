@@ -225,6 +225,9 @@ public class SimpleScriptParser extends Parser {
 		public ExprContext expr() {
 			return getRuleContext(ExprContext.class,0);
 		}
+		public ReturnStatementContext returnStatement() {
+			return getRuleContext(ReturnStatementContext.class,0);
+		}
 		public StatementContext(ParserRuleContext parent, int invokingState) {
 			super(parent, invokingState);
 		}
@@ -339,6 +342,13 @@ public class SimpleScriptParser extends Parser {
 				expr();
 				setState(103);
 				match(SEMICOLON);
+				}
+				break;
+			case 13:
+				enterOuterAlt(_localctx, 13);
+				{
+				setState(99);
+				returnStatement();
 				}
 				break;
 			}
@@ -694,6 +704,7 @@ public class SimpleScriptParser extends Parser {
 		enterRule(_localctx, 12, RULE_functionDeclaration);
 		int _la;
 		try {
+			int _alt;
 			enterOuterAlt(_localctx, 1);
 			{
 			setState(145);
@@ -792,7 +803,7 @@ public class SimpleScriptParser extends Parser {
 				}
 				setState(174);
 				_errHandler.sync(this);
-				_la = _input.LA(1);
+				_alt = getInterpreter().adaptivePredict(_input,9,_ctx);
 			}
 			setState(176);
 			_errHandler.sync(this);
