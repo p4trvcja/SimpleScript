@@ -93,6 +93,9 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
 
         for (int i = 0; i < ctx.NAME().size(); i++) {
             String name = ctx.NAME(i).getText();
+            if (variables.get(currentInstruction).containsKey(name)) {
+                throw new RuntimeException("Variable '" + name + "' already declared in the current scope.");
+            }
             Object value = visit(ctx.expr(i));
 
             if (value instanceof String)
@@ -173,10 +176,8 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
     public Object visitTerm(SimpleScriptParser.TermContext ctx) {
         Object result = visit(ctx.factor());
 
-        if (ctx.factor() != null) {
-            result =  visit(ctx.factor());
-        }
-        result = sourceVariable((String) result);
+        if(result instanceof String)
+            result = sourceVariable((String) result);
 
         if (ctx.term() != null) {
             Object nextFactorResult = visit(ctx.term());
