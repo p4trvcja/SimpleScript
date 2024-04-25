@@ -6,14 +6,14 @@ import java.util.*;
 public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
     private int currentInstruction = 0;
     private final Map<String, FunctionInfo> functions = new HashMap<>();
-    private final Map<Integer, Map<String, Variable>> variables = new HashMap<>();
+    public Map<Integer, Map<String, Variable>> variables = new HashMap<>();
 
     public InterpretVisitor() {
         super();
         variables.put(0, new HashMap<>());
     }
     
-    public class Variable {
+    public static class Variable {
         private String type;
         private Object value;
     
@@ -52,6 +52,8 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
         private final String returnType;
         private final List<SimpleScriptParser.StatementContext> block;
         private final int functionID = ID++;
+        // private boolean returnFlag = false;
+        // private Object returnResult = null;
 
         public FunctionInfo(String returnType, List<SimpleScriptParser.StatementContext> block) {
             this.returnType = returnType;
@@ -79,6 +81,10 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
         }
     }
 
+    public void setVariables(Map<Integer, Map<String, Variable>> variables) {
+        this.variables = variables;
+    }
+
     public Map<Integer, Map<String, Variable>> getVariables() {
         return variables;
     }
@@ -98,7 +104,7 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
 
             Variable variable = new Variable(type, value);
             variables.get(currentInstruction).put(name, variable);
-            // System.out.println("Variable '" + name + "' of type '" + type + "' defined with value: " + value);
+            System.out.println("Variable '" + name + "' of type '" + type + "' defined with value: " + value);
         }
         return null;
     }
@@ -110,7 +116,7 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
             String name = ctx.NAME(i).getText();
             Variable variable = new Variable(type, null); // Initialize with null value
             variables.get(currentInstruction).put(name, variable);
-            // System.out.println("Variable '" + name + "' of type '" + type + "' declared");
+            System.out.println("Variable '" + name + "' of type '" + type + "' declared");
         }
         return null;
     }
@@ -131,7 +137,7 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
         if (Objects.nonNull(localVariables) && Objects.nonNull(localVariables.get(name))) {
             Variable variable = new Variable(localVariables.get(name).getType(), value);
             variables.get(currentInstruction).put(name, variable);
-            // System.out.println("Variable '" + name + "' assigned value: " + value);
+            System.out.println("Variable '" + name + "' assigned value: " + value);
         } else {
             System.err.println("Error: Variable '" + name + "' has not been declared");
         }
@@ -299,8 +305,6 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
                     return (float) left - (float) right;
                 }
                 break;
-            // Add other arithmetic operations as needed
-            // Handle multiplication, division, etc.
         }
 
         // If none of the cases match, return null or throw an error
@@ -398,7 +402,13 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
 
     @Override
     public Object visitReturnStatement(SimpleScriptParser.ReturnStatementContext ctx) {
-        return visit(ctx.expr());
+        // Object returnValue = visit(ctx.expr());
+        // Set a flag to indicate that a return statement has been encountered
+        // returnFlag = true;
+        // // Store the return value
+        // returnResult = returnValue;
+        // Return null as we don't need to continue visiting the rest of the statements
+        return null;
     }
 
     @Override

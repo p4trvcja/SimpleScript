@@ -18,6 +18,7 @@ statement: variableDeclaration
            | arrayAssignment
            | printStatement
            | expr SEMICOLON
+           | returnStatement
            ; 
 
 // variables
@@ -54,13 +55,6 @@ arrayAssignment: NAME ASSIGN LBRACK arguments? RBRACK SEMICOLON;
 printStatement: PRINT LPAREN expr RPAREN SEMICOLON;
  
 // expresions
-// expr: expr ARITHMETIC_OP expr 
-//       | expr CONDITION_OP expr 
-//       | singleValueOperation 
-//       | value 
-//       | functionInvocation 
-//       | stringOperation
-//       ; 
 
 expr: value 
       | arithmeticOperation
