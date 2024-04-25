@@ -167,6 +167,9 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
     public Object visitTerm(SimpleScriptParser.TermContext ctx) {
         Object result = visit(ctx.factor());
 
+        if (ctx.factor() != null) {
+            result =  visit(ctx.factor());
+        }
         result = sourceVariable((String) result);
 
         if (ctx.term() != null) {
