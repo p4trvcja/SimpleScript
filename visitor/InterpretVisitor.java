@@ -116,7 +116,7 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
             String name = ctx.NAME(i).getText();
             Variable variable = new Variable(type, null); // Initialize with null value
             variables.get(currentInstruction).put(name, variable);
-            System.out.println("Variable '" + name + "' of type '" + type + "' declared");
+            // System.out.println("Variable '" + name + "' of type '" + type + "' declared");
         }
         return null;
     }

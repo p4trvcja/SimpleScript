@@ -1,7 +1,4 @@
-int fun(){
-    int x = 10;
-    int z = 20;
-    return(x);
-};
+x = 10;
+print(x);
 
-print(fun());
+int x;

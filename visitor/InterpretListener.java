@@ -18,9 +18,14 @@ public class InterpretListener extends SimpleScriptBaseListener{
         String type = ctx.TYPE().getText();
         for (int i = 0; i < ctx.NAME().size(); i++) {
             String name = ctx.NAME(i).getText();
-            Variable variable = new Variable(type, null); // Initialize with null value
-            variables.get(currentInstruction).put(name, variable);
-            System.out.println("Variable '" + name + "' of type '" + type + "' declared");
+
+            if (variables.get(currentInstruction).containsKey(name)) {
+                throw new RuntimeException("Variable '" + name + "' already declared in the current scope.");
+            } else {
+                Variable variable = new Variable(type, null); // Initialize with null value
+                variables.get(currentInstruction).put(name, variable);
+                System.out.println("Variable '" + name + "' of type '" + type + "' declared");
+            }
         }
     }
 
