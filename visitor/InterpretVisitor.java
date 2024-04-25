@@ -109,18 +109,18 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
         return null;
     }
 
-    @Override
-    public Void visitVariableDeclaration(SimpleScriptParser.VariableDeclarationContext ctx) {
-        String type = ctx.TYPE().getText();
+    // @Override
+    // public Void visitVariableDeclaration(SimpleScriptParser.VariableDeclarationContext ctx) {
+    //     String type = ctx.TYPE().getText();
 
-        for (int i = 0; i < ctx.NAME().size(); i++) {
-            String name = ctx.NAME(i).getText();
-            Variable variable = new Variable(type, null);
-            variables.get(currentInstruction).put(name, variable);
-        }
+    //     for (int i = 0; i < ctx.NAME().size(); i++) {
+    //         String name = ctx.NAME(i).getText();
+    //         Variable variable = new Variable(type, null);
+    //         variables.get(currentInstruction).put(name, variable);
+    //     }
 
-        return null;
-    }
+    //     return null;
+    // }
 
     @Override
     public Void visitVariableAssignment(SimpleScriptParser.VariableAssignmentContext ctx) {
