@@ -550,6 +550,18 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
         return null;
     }
 
+    @Override
+    public Object visitWhileLoop(SimpleScriptParser.WhileLoopContext ctx) {
+        boolean condition = (boolean) visit(ctx.conditionalOperation());
+
+        while (condition) {
+            visit(ctx.block());
+            condition = (boolean) visit(ctx.conditionalOperation());
+        }
+
+        return null;
+    }
+
 
     private Object executeFunction(String functionName) {
         FunctionInfo functionInfo = functions.get(functionName);
