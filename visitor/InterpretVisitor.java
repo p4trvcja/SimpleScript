@@ -524,6 +524,32 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
         return executeFunction(functionName);
     }
 
+    @Override
+    public Object visitIfCondition(SimpleScriptParser.IfConditionContext ctx) {
+       boolean result = (boolean) visit(ctx.conditionalOperation(0));
+
+       if (result) {
+           visit(ctx.block(0));
+           return null;
+       } else if (!ctx.ELIF().isEmpty()){
+           for (int i = 1; i <= ctx.ELIF().size(); i++) {
+               result = (boolean) visit(ctx.conditionalOperation(i));
+
+               if (result) {
+                   visit(ctx.block(i));
+                   return null;
+               }
+           }
+       }
+
+        if (Objects.nonNull(ctx.ELSE())) {
+            visit(ctx.block(ctx.conditionalOperation().size()));
+            return null;
+        }
+
+        return null;
+    }
+
 
     private Object executeFunction(String functionName) {
         FunctionInfo functionInfo = functions.get(functionName);
