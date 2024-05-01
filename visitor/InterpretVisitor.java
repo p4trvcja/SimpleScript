@@ -118,16 +118,88 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
         String name = ctx.NAME().getText();
         Object value = visit(ctx.expr());
 
-        value = sourceVariable((String) value);
+        if (value instanceof String)
+             value = sourceVariable((String) value);
 
         Map<String, Variable> localVariables = variables.get(currentInstruction);
 
-        if (Objects.nonNull(localVariables) && Objects.nonNull(localVariables.get(name))) {
-            Variable variable = new Variable(localVariables.get(name).getType(), value);
-            variables.get(currentInstruction).put(name, variable);
-        } else {
-            System.err.println("Error: Variable '" + name + "' has not been declared");
+        if (Objects.nonNull(ctx.ASSIGN())) {
+            if (Objects.nonNull(localVariables) && Objects.nonNull(localVariables.get(name))) {
+                Variable variable = new Variable(localVariables.get(name).getType(), value);
+                variables.get(currentInstruction).put(name, variable);
+            } else {
+                System.err.println("Error: Variable '" + name + "' has not been declared");
+                System.exit(1);
+            }
         }
+
+        if (Objects.nonNull(ctx.ASSIGNMENT())) {
+
+            Object baseVariable = sourceVariable(name);
+
+            if (baseVariable instanceof String)
+                baseVariable = parseValue((String) baseVariable);
+
+            if (value instanceof String)
+                value = parseValue((String) value);
+
+            switch (ctx.ASSIGNMENT().getText()) {
+                case "+=":
+                    if (baseVariable instanceof Integer && value instanceof Integer) {
+                        Variable variable = new Variable(localVariables.get(name).getType(), (int) baseVariable + (int) value);
+                        variables.get(currentInstruction).put(name, variable);
+                    } else if (baseVariable instanceof Float && value instanceof Float) {
+                        Variable variable = new Variable(localVariables.get(name).getType(), (float) baseVariable + (float) value);
+                        variables.get(currentInstruction).put(name, variable);
+                    } else {
+                        System.out.println("Error: The types of " + baseVariable + " and " + value + " vary. Cannot perform the assignment.");
+                        System.exit(1);
+                    }
+                    break;
+                case "-=":
+                    if (baseVariable instanceof Integer && value instanceof Integer) {
+                        Variable variable = new Variable(localVariables.get(name).getType(), (int) baseVariable - (int) value);
+                        variables.get(currentInstruction).put(name, variable);
+                    } else if (baseVariable instanceof Float && value instanceof Float) {
+                        Variable variable = new Variable(localVariables.get(name).getType(), (float) baseVariable - (float) value);
+                        variables.get(currentInstruction).put(name, variable);
+                    } else {
+                        System.out.println("Error: The types of " + baseVariable + " and " + value + " vary. Cannot perform the assignment.");
+                        System.exit(1);
+                    }
+                    break;
+                case "*=":
+                    if (baseVariable instanceof Integer && value instanceof Integer) {
+                        Variable variable = new Variable(localVariables.get(name).getType(), (int) baseVariable * (int) value);
+                        variables.get(currentInstruction).put(name, variable);
+                    } else if (baseVariable instanceof Float && value instanceof Float) {
+                        Variable variable = new Variable(localVariables.get(name).getType(), (float) baseVariable * (float) value);
+                        variables.get(currentInstruction).put(name, variable);
+                    } else {
+                        System.out.println("Error: The types of " + baseVariable + " and " + value + " vary. Cannot perform the assignment.");
+                        System.exit(1);
+                    }
+                    break;
+                case "/=":
+                    try {
+                        if (baseVariable instanceof Integer && value instanceof Integer) {
+                            Variable variable = new Variable(localVariables.get(name).getType(), (int) baseVariable / (int) value);
+                            variables.get(currentInstruction).put(name, variable);
+                        } else if (baseVariable instanceof Float && value instanceof Float) {
+                            Variable variable = new Variable(localVariables.get(name).getType(), (float) baseVariable / (float) value);
+                            variables.get(currentInstruction).put(name, variable);
+                        } else {
+                            System.out.println("Error: The types of " + baseVariable + " and " + value + " vary. Cannot perform the assignment.");
+                            System.exit(1);
+                        }
+                    } catch (ArithmeticException e) {
+                        System.out.println("Error: Division by 0.");
+                        System.exit(1);
+                    }
+                    break;
+            }
+        }
+
         return null;
     }
 
