@@ -518,6 +518,16 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
     
     @Override
     public Object visitValue(SimpleScriptParser.ValueContext ctx) {
+
+        if (ctx.NAME() != null) {
+            String variableName = ctx.NAME().getText();
+
+            if (!variables.get(currentInstruction).containsKey(variableName)) {
+                System.err.println("Error: Variable '" + variableName + "' is not defined.");
+                return null;
+            }
+        }
+
         if (ctx.NAME() != null) {
             return ctx.NAME().getText();
         } else if (ctx.STRING() != null) {
@@ -529,6 +539,46 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
             return ctx.BOOLEAN().getText();
         }
 
+        return null;
+    }
+
+    @Override
+    public Object visitSingleValueOperation(SimpleScriptParser.SingleValueOperationContext ctx) {
+        String variableName = ctx.NAME().getText();
+        String operation = ctx.SINGLE_VAL_OP().getText();
+    
+        // Get the current value of the variable
+        Object value = sourceVariable(variableName);
+
+        if (value instanceof String){
+            value = parseValue((String) value);
+        }
+    
+        // Apply the operation
+        if (value instanceof Integer) {
+            if (operation.equals("++")) {
+                value = (int) value + 1;
+            } else if (operation.equals("--")) {
+                value = (int) value - 1;
+            }
+        } else if (value instanceof Float) {
+            if (operation.equals("++")) {
+                value = (float) value + 1;
+            } else if (operation.equals("--")) {
+                value = (float) value - 1;
+            }
+        }
+    
+        // Update the variable value
+        Map<String, Variable> localVariables = variables.get(currentInstruction);
+        if (localVariables.containsKey(variableName)) {
+            Variable variable = new Variable(localVariables.get(variableName).getType(), value);
+            variables.get(currentInstruction).put(variableName, variable);
+        } else {
+            System.err.println("Error: Variable '" + variableName + "' has not been declared");
+            System.exit(1);
+        }
+    
         return null;
     }
 
@@ -634,6 +684,25 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
         return null;
     }
 
+    @Override
+    public Object visitForLoop(SimpleScriptParser.ForLoopContext ctx) {
+        SimpleScriptParser.VariableDefinitionContext variableDefinitionContext = ctx.variableDefinition();
+        SimpleScriptParser.ConditionalOperationContext conditionalOperationContext = ctx.conditionalOperation();
+        SimpleScriptParser.SingleValueOperationContext singleValueOperationContext = ctx.singleValueOperation();
+        SimpleScriptParser.VariableAssignmentContext variableAssignmentContext = ctx.variableAssignment();
+
+        visitVariableDefinition(variableDefinitionContext); 
+        while ((boolean) visit(conditionalOperationContext)) { 
+            visit(ctx.block());
+            if (singleValueOperationContext != null) {
+                visitSingleValueOperation(singleValueOperationContext);
+            } else if (variableAssignmentContext != null) {
+                visitVariableAssignment(variableAssignmentContext);
+            }
+        }
+
+        return null;
+    }
 
     private Object executeFunction(String functionName) {
         FunctionInfo functionInfo = functions.get(functionName);
