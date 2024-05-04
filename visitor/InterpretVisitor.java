@@ -704,6 +704,79 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
         return null;
     }
 
+    @Override
+    public Object visitArguments(SimpleScriptParser.ArgumentsContext ctx) {
+        List<Object> values = new ArrayList<>();
+        String type;
+
+        Object firstExpr = visit(ctx.expr(0));
+
+        try {
+            Integer.parseInt((String) firstExpr);
+            type = "int";
+        } catch (NumberFormatException e1) {
+            try {
+                Float.parseFloat((String) firstExpr);
+                type = "float";
+            } catch (NumberFormatException e2) {
+                try {
+                    Boolean.parseBoolean((String) firstExpr);
+                    type = "boolean";
+                } catch (NumberFormatException e3) {
+                    System.out.println("Unknown type");
+                    return null;
+                }
+            }
+        }
+
+        values.add(firstExpr);
+
+        for (int i = 1; i < ctx.expr().size(); i++) {
+            Object expr = visit(ctx.expr(i));
+
+            try {
+                switch (type) {
+                    case "int":
+                        Integer.parseInt((String) expr);
+                        break;
+                    case "float":
+                        Float.parseFloat((String) expr);
+                        break;
+                    case "boolean":
+                        Boolean.parseBoolean((String) expr);
+                        break;
+                    default:
+                        System.out.println("Unknown type");
+                        return null;
+                }
+            } catch (NumberFormatException e) {
+                System.err.println("Error: Inhomogeneous values provided as the array arguments");
+                System.exit(1);
+            }
+
+            values.add(expr);
+        }
+
+        return values;
+    }
+
+    @Override
+    public Object visitArrayDefinition(SimpleScriptParser.ArrayDefinitionContext ctx) {
+        String type = ctx.arrayType().TYPE().getText() + "[" + "]";
+        String name = ctx.NAME().getText();
+        Object arguments = new ArrayList<>();
+
+        if (ctx.arguments() != null) {
+            arguments = visit(ctx.arguments());
+        }
+
+        Variable variable = new Variable(type, arguments);
+
+        variables.get(currentInstruction).put(name, variable);
+
+        return null;
+    }
+
     private Object executeFunction(String functionName) {
         FunctionInfo functionInfo = functions.get(functionName);
 
