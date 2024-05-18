@@ -68,6 +68,7 @@ expr: value
       | singleValueOperation 
       | functionInvocation 
       | stringOperation
+      | returnStatement
       ; 
 
 // basic operations
