@@ -48,12 +48,15 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
     public static class FunctionInfo {
         private static int ID = 1;
         private final String returnType;
+        private final int parametersCount;
         private final List<SimpleScriptParser.StatementContext> block;
+        private SimpleScriptParser.ReturnStatementContext returnStatementContext;
         private final int functionID = ID++;
 
-        public FunctionInfo(String returnType, List<SimpleScriptParser.StatementContext> block) {
+        public FunctionInfo(String returnType, List<SimpleScriptParser.StatementContext> block, int parametersCount) {
             this.returnType = returnType;
             this.block = block;
+            this.parametersCount = parametersCount;
         }
 
         public List<SimpleScriptParser.StatementContext> getBlock() {
@@ -66,6 +69,10 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
 
         public int getFunctionID() {
             return functionID;
+        }
+
+        public void setReturnStatementContext(SimpleScriptParser.ReturnStatementContext returnStatementContext) {
+            this.returnStatementContext = returnStatementContext;
         }
 
         @Override
@@ -152,7 +159,7 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
                         Variable variable = new Variable(localVariables.get(name).getType(), (float) baseVariable + (float) value);
                         variables.get(currentInstruction).put(name, variable);
                     } else {
-                        System.out.println("Error: The types of " + baseVariable + " and " + value + " vary. Cannot perform the assignment.");
+                        System.err.println("Error: The types of " + baseVariable + " and " + value + " vary. Cannot perform the assignment.");
                         System.exit(1);
                     }
                     break;
@@ -164,7 +171,7 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
                         Variable variable = new Variable(localVariables.get(name).getType(), (float) baseVariable - (float) value);
                         variables.get(currentInstruction).put(name, variable);
                     } else {
-                        System.out.println("Error: The types of " + baseVariable + " and " + value + " vary. Cannot perform the assignment.");
+                        System.err.println("Error: The types of " + baseVariable + " and " + value + " vary. Cannot perform the assignment.");
                         System.exit(1);
                     }
                     break;
@@ -176,7 +183,7 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
                         Variable variable = new Variable(localVariables.get(name).getType(), (float) baseVariable * (float) value);
                         variables.get(currentInstruction).put(name, variable);
                     } else {
-                        System.out.println("Error: The types of " + baseVariable + " and " + value + " vary. Cannot perform the assignment.");
+                        System.err.println("Error: The types of " + baseVariable + " and " + value + " vary. Cannot perform the assignment.");
                         System.exit(1);
                     }
                     break;
@@ -189,11 +196,11 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
                             Variable variable = new Variable(localVariables.get(name).getType(), (float) baseVariable / (float) value);
                             variables.get(currentInstruction).put(name, variable);
                         } else {
-                            System.out.println("Error: The types of " + baseVariable + " and " + value + " vary. Cannot perform the assignment.");
+                            System.err.println("Error: The types of " + baseVariable + " and " + value + " vary. Cannot perform the assignment.");
                             System.exit(1);
                         }
                     } catch (ArithmeticException e) {
-                        System.out.println("Error: Division by 0.");
+                        System.err.println("Error: Division by 0.");
                         System.exit(1);
                     }
                     break;
@@ -206,6 +213,7 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
     @Override
     public Object visitPrintStatement(SimpleScriptParser.PrintStatementContext ctx) {
         Object value = visit(ctx.expr());
+
         Map<String, Variable> localVariables = variables.get(currentInstruction);
 
         if (value instanceof String && localVariables.containsKey(value)) {
@@ -261,8 +269,11 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
         } else if (ctx.expr() != null) {
             return visit(ctx.expr());
         } else {
-            throw new IllegalArgumentException("Incorrect factor context");
+            System.err.println("Error: Incorrect factor context");
+            System.exit(1);
         }
+
+        return null;
     }
 
     private Object multiply(Object a, Object b) {
@@ -275,14 +286,18 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
                 a = Float.parseFloat(String.valueOf(a));
                 b = Float.parseFloat(String.valueOf(b));
             } catch (NumberFormatException ex) {
-                throw new RuntimeException("Operands are not valid numbers");
+                System.err.println("Error: Operands are not valid numbers");
+                System.exit(1);
             }
         }
         if (a instanceof Integer && b instanceof Integer) {
             return (int) b * (int) a;
         } else {
-            throw new IllegalArgumentException("Incorrect arguments for multiplication");
+            System.err.println("Error: Incorrect arguments for multiplication");
+            System.exit(1);
         }
+
+        return null;
     }
 
 
@@ -296,17 +311,22 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
                 a = Float.parseFloat(String.valueOf(a));
                 b = Float.parseFloat(String.valueOf(b));
             } catch (NumberFormatException ex) {
-                throw new RuntimeException("Operands are not valid numbers");
+                System.err.println("Error: Operands are not valid numbers");
+                System.exit(1);
             }
         }
         if (a instanceof Integer && b instanceof Integer) {
             if ((int) b == 0) {
-                throw new ArithmeticException("Division by zero");
+                System.err.println("Error: Division by zero");
+                System.exit(1);
             }
             return (int) b / (int) a;
         } else {
-            throw new IllegalArgumentException("Incorrect arguments for division");
+            System.err.println("Error: Incorrect arguments for division");
+            System.exit(1);
         }
+
+        return null;
     }
 
     @Override
@@ -314,10 +334,16 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
         Object right = visit(ctx.term());
         Object left = null;
         String op = null;
+
+        if (right instanceof String)
+            right = sourceVariable((String) right);
     
         if (ctx.getChildCount() > 1) {
             op = ctx.getChild(1).getText();
             left = visit(ctx.arithmeticOperation());
+
+            if (left instanceof String)
+                left = sourceVariable((String) left);
         }
 
         try {
@@ -331,7 +357,8 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
                 if (right != null)
                     right = Float.parseFloat(String.valueOf(right));
             } catch (NumberFormatException ex) {
-                throw new RuntimeException("Operands are not valid numbers");
+                System.err.println("Error: Operands are not valid numbers");
+                System.exit(1);
             }
         }
 
@@ -462,7 +489,8 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
                     boolean nextBoolResult = nextFactorResult instanceof String ? (boolean) parseValue((String) nextFactorResult) : (boolean) nextFactorResult;
                     result = boolResult || nextBoolResult;
                 } catch (NumberFormatException e) {
-                    System.out.println("Invalid boolean value");
+                    System.err.println("Error: Invalid boolean value");
+                    System.exit(1);
                 }
             }
         }
@@ -486,7 +514,8 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
                     boolean nextBoolResult = nextFactorResult instanceof String ? (boolean) parseValue((String) nextFactorResult) : (boolean) nextFactorResult;
                     result = boolResult && nextBoolResult;
                 } catch (NumberFormatException e) {
-                    System.out.println("Invalid boolean value");
+                    System.err.println("Error: Invalid boolean value");
+                    System.exit(1);
                 }
             }
         }
@@ -522,9 +551,9 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
         if (ctx.NAME() != null) {
             String variableName = ctx.NAME().getText();
 
-            if (!variables.get(currentInstruction).containsKey(variableName)) {
+            if (!variables.get(currentInstruction).containsKey(variableName) && !variables.get(0).containsKey(variableName)) {
                 System.err.println("Error: Variable '" + variableName + "' is not defined.");
-                return null;
+                System.exit(1);
             }
         }
 
@@ -594,13 +623,54 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
 
     @Override
     public Object visitReturnStatement(SimpleScriptParser.ReturnStatementContext ctx) {
-        return visit(ctx.expr());
+
+        try {
+            for (Map.Entry<String, FunctionInfo> function : functions.entrySet()) {
+                FunctionInfo functionInfo = function.getValue();
+                if (functionInfo.functionID == currentInstruction) {
+                    Object returnValue = visit(ctx.expr());
+
+                    if (returnValue instanceof String) {
+                        returnValue = sourceVariable((String) returnValue);
+                    }
+
+                    return switch (functionInfo.returnType) {
+                        case "int" -> (int) returnValue;
+                        case "float" -> (float) returnValue;
+                        case "bool" -> Boolean.parseBoolean((String) returnValue);
+                        case "string" -> returnValue;
+                        default -> throw new IllegalStateException("Error: Unexpected value: " + functionInfo.returnType);
+                    };
+                }
+            }
+
+            exitProgram("Error: Function is not defined.");
+        } catch (Exception e) {
+            exitProgram("Error: Return type and value type don't match");
+        }
+
+        currentInstruction = 0;
+
+        return null;
+    }
+
+    private void exitProgram(String message) {
+        System.out.println(message);
+        System.exit(0);
     }
 
     @Override
     public Object visitFunctionDeclaration(SimpleScriptParser.FunctionDeclarationContext ctx) {
         String returnType = ctx.TYPE(0).getText();
         String functionName = ctx.NAME(0).getText();
+
+        if (ctx.returnStatement() != null && returnType.equals("void")) {
+            exitProgram("Void functions cannot contain a return statement.");
+        }
+
+        if (ctx.returnStatement() == null && !returnType.equals("void")) {
+            exitProgram("Function of the return type " + returnType + " should return a value.");
+        }
 
         Map<String, Variable> parameters = new LinkedHashMap<>();
 
@@ -615,11 +685,12 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
         List<SimpleScriptParser.StatementContext> blockContext = ctx.statement();
 
         if (blockContext.isEmpty()) {
-            throw new RuntimeException("Block context not found within FunctionDeclarationContext.");
+            System.err.println("Error: Block context not found.");
+            System.exit(1);
         }
 
-        FunctionInfo functionInfo = new FunctionInfo(returnType, blockContext);
-
+        FunctionInfo functionInfo = new FunctionInfo(returnType, blockContext, parameters.size());
+        functionInfo.setReturnStatementContext(ctx.returnStatement());
         currentInstruction = functionInfo.functionID;
 
         variables.put(functionInfo.functionID, parameters);
@@ -635,7 +706,23 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
         String functionName = ctx.NAME().getText();
         FunctionInfo functionInfo = functions.get(functionName);
 
+        if (Objects.isNull(functionInfo)) {
+            System.out.println("Function '" + functionName + "' is not defined.");
+            System.exit(0);
+        }
+
         currentInstruction = functionInfo.getFunctionID();
+
+        Iterator<Map.Entry<String, Variable>> iterator = variables.get(currentInstruction).entrySet().iterator();
+        int count = 0;
+
+        while (iterator.hasNext()) {
+            Map.Entry<String, Variable> entry = iterator.next();
+            if (count >= functionInfo.parametersCount) {
+                iterator.remove();
+            }
+            count++;
+        }
 
         int idx = 0;
 
@@ -760,6 +847,7 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
         return values;
     }
 
+
     @Override
     public Object visitArrayDefinition(SimpleScriptParser.ArrayDefinitionContext ctx) {
         String type = ctx.arrayType().TYPE().getText() + "[" + "]";
@@ -781,15 +869,19 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
         FunctionInfo functionInfo = functions.get(functionName);
 
         if (functionInfo == null) {
-            throw new RuntimeException("Function '" + functionName + "' is not defined.");
+            System.out.println("Error: Function '" + functionName + "' is not defined.");
+            System.exit(0);
         }
 
         for (var statement : functionInfo.block) {
             visit(statement);
         }
 
-        currentInstruction = 0;
+        if (functionInfo.returnStatementContext != null) {
+            return visit(functionInfo.returnStatementContext);
+        }
 
+        currentInstruction = 0;
         return null;
     }
 
