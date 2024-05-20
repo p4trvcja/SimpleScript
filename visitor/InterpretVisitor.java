@@ -238,7 +238,9 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
             return visitFunctionInvocation(ctx.functionInvocation());
         } else if (ctx.stringOperation() != null) {
             return visitStringOperation(ctx.stringOperation());
-        } else {
+        } else if(ctx.arrayAccess() != null){
+            return visitArrayAccess(ctx.arrayAccess());
+        }else {
             return null;
         }
     }
@@ -861,6 +863,40 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
         Variable variable = new Variable(type, arguments);
 
         variables.get(currentInstruction).put(name, variable);
+
+        return null;
+    }
+
+    @Override
+    public Object visitArrayAccess(SimpleScriptParser.ArrayAccessContext ctx) {
+        String arrayName = ctx.NAME().getText();
+        Object index = visit(ctx.expr());
+
+        if (index instanceof String)
+                index = parseValue((String) index);
+
+        if (index instanceof Integer && index instanceof Integer) {
+            int intIndex = (int) index;
+            Map<String, Variable> localVariables = variables.get(currentInstruction);
+            if (!localVariables.containsKey(arrayName)) {
+                System.err.println("Error: Array '" + arrayName + "' has not been declared");
+                System.exit(1);
+            }
+
+            Variable arrayVariable = localVariables.get(arrayName);
+            if (!(arrayVariable.getValue() instanceof List)) {
+                System.err.println("Error: Variable '" + arrayName + "' is not an array");
+                System.exit(1);
+            }
+
+            List<?> array = (List<?>) arrayVariable.getValue();
+            if (intIndex < 0 || intIndex >= array.size()) {
+                System.err.println("Error: Array index out of bounds");
+                System.exit(1);
+            }
+
+            return array.get(intIndex);
+        }
 
         return null;
     }

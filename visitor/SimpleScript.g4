@@ -50,6 +50,8 @@ arrayDeclaration: arrayType NAME SEMICOLON;
 
 arrayAssignment: NAME ASSIGN LBRACK arguments? RBRACK SEMICOLON; 
 
+arrayAccess: NAME LBRACK expr RBRACK;
+
 // printing   
 printStatement: PRINT LPAREN expr RPAREN SEMICOLON;
  
@@ -69,6 +71,7 @@ expr: value
       | functionInvocation 
       | stringOperation
       | returnStatement
+      | arrayAccess
       ; 
 
 // basic operations
