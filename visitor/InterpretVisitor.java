@@ -98,9 +98,17 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
 
             if (value instanceof String)
                 value = sourceVariable((String) value);
+            
+            if (type.equals("int") && value instanceof Float) {
+                value = ((Float) value).intValue();
+            }
+     
+            if(variables.get(currentInstruction).containsKey(name)) {
+                System.err.println("Duplicate Error: Variable '" + name + "' has been declared");
+                return null;
+            }
 
             Variable variable = new Variable(type, value);
-            
             variables.get(currentInstruction).put(name, variable);
         }
 
@@ -207,6 +215,14 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
             }
         }
 
+        if (localVariables.get(name).getType() == "int"){
+            Variable variable = new Variable(localVariables.get(name).getType(), (int) value);
+            variables.get(currentInstruction).put(name, variable);
+        }else if (localVariables.get(name).getType() == "float"){
+            Variable variable = new Variable(localVariables.get(name).getType(), (float) value);
+            variables.get(currentInstruction).put(name, variable);
+        }
+
         return null;
     }
 
@@ -294,6 +310,8 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
         }
         if (a instanceof Integer && b instanceof Integer) {
             return (int) b * (int) a;
+        } else if (a instanceof Float && b instanceof Float){
+            return (float) b * (float) a;
         } else {
             System.err.println("Error: Incorrect arguments for multiplication");
             System.exit(1);
@@ -323,6 +341,12 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
                 System.exit(1);
             }
             return (int) b / (int) a;
+        } else if(a instanceof Float && b instanceof Float) {
+            if ((float) b == 0.0) {
+                System.err.println("Error: Division by zero");
+                System.exit(1);
+            }
+            return (float) b / (float) a;
         } else {
             System.err.println("Error: Incorrect arguments for division");
             System.exit(1);
@@ -355,9 +379,9 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
 
         } catch (NumberFormatException e) {
             try {
-                left = Float.parseFloat(String.valueOf(left));
-                if (right != null)
-                    right = Float.parseFloat(String.valueOf(right));
+                right = Float.parseFloat(String.valueOf(right));
+                if (left != null)
+                    left = Float.parseFloat(String.valueOf(left));
             } catch (NumberFormatException ex) {
                 System.err.println("Error: Operands are not valid numbers");
                 System.exit(1);

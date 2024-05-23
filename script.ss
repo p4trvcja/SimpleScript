@@ -1,3 +1,12 @@
-int x = 3.1 + 1.2;
+int sum(int a, int b) {
+    return(a + b);
+};
 
-print(x);
+int x(int d) {
+    sum(3, 5);
+    print(d);
+    return(10);
+};
+
+x(30);
+print(sum(1, 2));
