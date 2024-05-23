@@ -207,6 +207,15 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
             }
         }
 
+        if (localVariables.get(name).getType() == "int"){
+            Variable variable = new Variable(localVariables.get(name).getType(), (int) value);
+            variables.get(currentInstruction).put(name, variable);
+        }else if (localVariables.get(name).getType() == "float"){
+            Variable variable = new Variable(localVariables.get(name).getType(), (float) value);
+            variables.get(currentInstruction).put(name, variable);
+        }
+       
+
         return null;
     }
 
@@ -355,9 +364,9 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
 
         } catch (NumberFormatException e) {
             try {
-                left = Float.parseFloat(String.valueOf(left));
-                if (right != null)
-                    right = Float.parseFloat(String.valueOf(right));
+                right = Float.parseFloat(String.valueOf(right));
+                if (left != null)
+                    left = Float.parseFloat(String.valueOf(left));
             } catch (NumberFormatException ex) {
                 System.err.println("Error: Operands are not valid numbers");
                 System.exit(1);
