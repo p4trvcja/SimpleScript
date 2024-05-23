@@ -207,15 +207,6 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
             }
         }
 
-        if (localVariables.get(name).getType() == "int"){
-            Variable variable = new Variable(localVariables.get(name).getType(), (int) value);
-            variables.get(currentInstruction).put(name, variable);
-        }else if (localVariables.get(name).getType() == "float"){
-            Variable variable = new Variable(localVariables.get(name).getType(), (float) value);
-            variables.get(currentInstruction).put(name, variable);
-        }
-       
-
         return null;
     }
 
@@ -364,9 +355,9 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
 
         } catch (NumberFormatException e) {
             try {
-                right = Float.parseFloat(String.valueOf(right));
-                if (left != null)
-                    left = Float.parseFloat(String.valueOf(left));
+                left = Float.parseFloat(String.valueOf(left));
+                if (right != null)
+                    right = Float.parseFloat(String.valueOf(right));
             } catch (NumberFormatException ex) {
                 System.err.println("Error: Operands are not valid numbers");
                 System.exit(1);
@@ -645,6 +636,8 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
                         returnValue = sourceVariable((String) returnValue);
                     }
 
+                    currentInstruction = 0;
+
                     return switch (functionInfo.returnType) {
                         case "int" -> (int) returnValue;
                         case "float" -> (float) returnValue;
@@ -676,11 +669,11 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
         String functionName = ctx.NAME(0).getText();
 
         if (ctx.returnStatement() != null && returnType.equals("void")) {
-            exitProgram("Void functions cannot contain a return statement.");
+            exitProgram("Error: Void functions cannot contain a return statement.");
         }
 
         if (ctx.returnStatement() == null && !returnType.equals("void")) {
-            exitProgram("Function of the return type " + returnType + " should return a value.");
+            exitProgram("Error: Function of the return type " + returnType + " should return a value.");
         }
 
         Map<String, Variable> parameters = new LinkedHashMap<>();
@@ -695,7 +688,7 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
 
         List<SimpleScriptParser.StatementContext> blockContext = ctx.statement();
 
-        if (blockContext.isEmpty()) {
+        if (blockContext.isEmpty() && returnType.equals("void")) {
             System.err.println("Error: Block context not found.");
             System.exit(1);
         }
