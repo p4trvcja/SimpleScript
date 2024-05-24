@@ -140,7 +140,7 @@ iterationStatement: whileLoop
 whileLoop : WHILE LPAREN conditionalOperation RPAREN block; 
 
 // for
-forLoop : FOR LPAREN variableDefinition conditionalOperation SEMICOLON (singleValueOperation | variableAssignment) RPAREN block; 
+forLoop : FOR LPAREN variableDefinition conditionalOperation SEMICOLON (singleValueOperation | variableAssignment) RPAREN block;
 
 forLoopArray : FOR LPAREN parameter IN NAME RPAREN block; 
 
@@ -152,7 +152,6 @@ conditionalStatement:  ifCondition
 // if
 ifCondition : IF LPAREN conditionalOperation RPAREN block (ELIF LPAREN conditionalOperation RPAREN block)* (ELSE block)?; 
 
-// TODO: switch
 //switch
 switchCondition : SWITCH LPAREN NAME RPAREN LBRACE (CASE value COLON statement* (BREAK SEMICOLON)? )* (DEFAULT COLON statement* (BREAK SEMICOLON)? )? RBRACE;
 

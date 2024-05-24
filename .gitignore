@@ -18,6 +18,7 @@
 /**/gen
 # *.tokens
 out
+.iml
 
 # Ignore C# regression temporaries.
 **/Generated*/
@@ -34,3 +35,4 @@ antlr4-*-complete.jar
 # *.java
 *.class
 # *.interp
+*.jar

@@ -4,11 +4,12 @@ import java.util.*;
 public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
     private int currentInstruction = 0;
     private final Map<String, FunctionInfo> functions = new HashMap<>();
-    private final Map<Integer, Map<String, Variable>> variables = new HashMap<>();
+    //private final Map<Integer, Map<String, Variable>> variables = new HashMap<>();
+    private final Deque<Map<String, Variable>> scopeStack = new ArrayDeque<>();
 
     public InterpretVisitor() {
         super();
-        variables.put(0, new HashMap<>());
+        scopeStack.push(new HashMap<>());
     }
     
     public static class Variable {
@@ -52,11 +53,13 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
         private final List<SimpleScriptParser.StatementContext> block;
         private SimpleScriptParser.ReturnStatementContext returnStatementContext;
         private final int functionID = ID++;
+        public Map<String, Variable> parameters; // Add this line
 
         public FunctionInfo(String returnType, List<SimpleScriptParser.StatementContext> block, int parametersCount) {
             this.returnType = returnType;
             this.block = block;
             this.parametersCount = parametersCount;
+            this.parameters = new LinkedHashMap<>();
         }
 
         public List<SimpleScriptParser.StatementContext> getBlock() {
@@ -80,49 +83,66 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
             return "FunctionInfo{" +
                     "returnType='" + returnType + '\'' +
                     ", block=" + block +
+                    ", parameters=" + parameters + // Add this line
                     '}';
         }
     }
 
-    public Map<Integer, Map<String, Variable>> getVariables() {
-        return variables;
+    private Map<String, Variable> currentScope() {
+        return scopeStack.peek();
     }
 
     @Override
     public Void visitVariableDefinition(SimpleScriptParser.VariableDefinitionContext ctx) {
         String type = ctx.TYPE().getText();
+        Map<String, Variable> currentScope = scopeStack.peek();
 
         for (int i = 0; i < ctx.NAME().size(); i++) {
             String name = ctx.NAME(i).getText();
             Object value = visit(ctx.expr(i));
 
-            if (value instanceof String)
-                value = sourceVariable((String) value);
-            
+            if (value instanceof String) {
+                // Check if the string is a variable name
+                String strValue = (String) value;
+                if (currentScope.containsKey(strValue) || isVariableName(strValue)) {
+                    value = sourceVariable(strValue);
+                }
+            }
+
             if (type.equals("int") && value instanceof Float) {
                 value = ((Float) value).intValue();
             }
-     
-            if(variables.get(currentInstruction).containsKey(name)) {
+
+            if (currentScope.containsKey(name)) {
                 System.err.println("Duplicate Error: Variable '" + name + "' has been declared");
-                return null;
+                System.exit(1);
             }
 
             Variable variable = new Variable(type, value);
-            variables.get(currentInstruction).put(name, variable);
+            currentScope.put(name, variable);
         }
 
         return null;
     }
 
+    private boolean isVariableName(String name) {
+        for (Map<String, Variable> scope : scopeStack) {
+            if (scope.containsKey(name)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     @Override
     public Void visitVariableDeclaration(SimpleScriptParser.VariableDeclarationContext ctx) {
         String type = ctx.TYPE().getText();
+        Map<String, Variable> currentScope = scopeStack.peek();
 
         for (int i = 0; i < ctx.NAME().size(); i++) {
             String name = ctx.NAME(i).getText();
             Variable variable = new Variable(type, null);
-            variables.get(currentInstruction).put(name, variable);
+            currentScope.put(name, variable);
         }
 
         return null;
@@ -133,23 +153,26 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
         String name = ctx.NAME().getText();
         Object value = visit(ctx.expr());
 
-        if (value instanceof String)
-             value = sourceVariable((String) value);
+        if (value instanceof String) {
+            String strValue = (String) value;
+            if (isVariableName(strValue)) {
+                value = sourceVariable(strValue);
+            }
+        }
 
-        Map<String, Variable> localVariables = variables.get(currentInstruction);
+        Map<String, Variable> currentScope = scopeStack.peek();
 
-        if (Objects.nonNull(ctx.ASSIGN())) {
-            if (Objects.nonNull(localVariables) && Objects.nonNull(localVariables.get(name))) {
-                Variable variable = new Variable(localVariables.get(name).getType(), value);
-                variables.get(currentInstruction).put(name, variable);
+        if (ctx.ASSIGN() != null) {
+            if (currentScope.containsKey(name)) {
+                Variable variable = currentScope.get(name);
+                variable.setValue(value);
             } else {
                 System.err.println("Error: Variable '" + name + "' has not been declared");
                 System.exit(1);
             }
         }
 
-        if (Objects.nonNull(ctx.ASSIGNMENT())) {
-
+        if (ctx.ASSIGNMENT() != null) {
             Object baseVariable = sourceVariable(name);
 
             if (baseVariable instanceof String)
@@ -158,14 +181,14 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
             if (value instanceof String)
                 value = parseValue((String) value);
 
+            Variable variable = currentScope.get(name);
+
             switch (ctx.ASSIGNMENT().getText()) {
                 case "+=":
                     if (baseVariable instanceof Integer && value instanceof Integer) {
-                        Variable variable = new Variable(localVariables.get(name).getType(), (int) baseVariable + (int) value);
-                        variables.get(currentInstruction).put(name, variable);
+                        variable.setValue((int) baseVariable + (int) value);
                     } else if (baseVariable instanceof Float && value instanceof Float) {
-                        Variable variable = new Variable(localVariables.get(name).getType(), (float) baseVariable + (float) value);
-                        variables.get(currentInstruction).put(name, variable);
+                        variable.setValue((float) baseVariable + (float) value);
                     } else {
                         System.err.println("Error: The types of " + baseVariable + " and " + value + " vary. Cannot perform the assignment.");
                         System.exit(1);
@@ -173,11 +196,9 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
                     break;
                 case "-=":
                     if (baseVariable instanceof Integer && value instanceof Integer) {
-                        Variable variable = new Variable(localVariables.get(name).getType(), (int) baseVariable - (int) value);
-                        variables.get(currentInstruction).put(name, variable);
+                        variable.setValue((int) baseVariable - (int) value);
                     } else if (baseVariable instanceof Float && value instanceof Float) {
-                        Variable variable = new Variable(localVariables.get(name).getType(), (float) baseVariable - (float) value);
-                        variables.get(currentInstruction).put(name, variable);
+                        variable.setValue((float) baseVariable - (float) value);
                     } else {
                         System.err.println("Error: The types of " + baseVariable + " and " + value + " vary. Cannot perform the assignment.");
                         System.exit(1);
@@ -185,11 +206,9 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
                     break;
                 case "*=":
                     if (baseVariable instanceof Integer && value instanceof Integer) {
-                        Variable variable = new Variable(localVariables.get(name).getType(), (int) baseVariable * (int) value);
-                        variables.get(currentInstruction).put(name, variable);
+                        variable.setValue((int) baseVariable * (int) value);
                     } else if (baseVariable instanceof Float && value instanceof Float) {
-                        Variable variable = new Variable(localVariables.get(name).getType(), (float) baseVariable * (float) value);
-                        variables.get(currentInstruction).put(name, variable);
+                        variable.setValue((float) baseVariable * (float) value);
                     } else {
                         System.err.println("Error: The types of " + baseVariable + " and " + value + " vary. Cannot perform the assignment.");
                         System.exit(1);
@@ -198,14 +217,12 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
                 case "/=":
                     try {
                         if (baseVariable instanceof Integer && value instanceof Integer) {
-                            Variable variable = new Variable(localVariables.get(name).getType(), (int) baseVariable / (int) value);
-                            variables.get(currentInstruction).put(name, variable);
+                            variable.setValue((int) baseVariable / (int) value);
                         } else if (baseVariable instanceof Float && value instanceof Float) {
-                            Variable variable = new Variable(localVariables.get(name).getType(), (float) baseVariable / (float) value);
-                            variables.get(currentInstruction).put(name, variable);
+                            variable.setValue((float) baseVariable / (float) value);
                         } else {
-                            System.err.println("Error: The types of " + baseVariable + " and " + value + " vary. Cannot perform the assignment.");
-                            System.exit(1);
+                            System.err.println("Error: The types of " + baseVariable + " and " + value + "vary. Cannot perform the assignment.");
+                                    System.exit(1);
                         }
                     } catch (ArithmeticException e) {
                         System.err.println("Error: Division by 0.");
@@ -215,22 +232,15 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
             }
         }
 
-        if (localVariables.get(name).getType() == "int"){
-            Variable variable = new Variable(localVariables.get(name).getType(), (int) value);
-            variables.get(currentInstruction).put(name, variable);
-        }else if (localVariables.get(name).getType() == "float"){
-            Variable variable = new Variable(localVariables.get(name).getType(), (float) value);
-            variables.get(currentInstruction).put(name, variable);
-        }
-
         return null;
     }
+
 
     @Override
     public Object visitPrintStatement(SimpleScriptParser.PrintStatementContext ctx) {
         Object value = visit(ctx.expr());
 
-        Map<String, Variable> localVariables = variables.get(currentInstruction);
+        Map<String, Variable> localVariables = currentScope();
 
         if (value instanceof String && localVariables.containsKey(value)) {
             System.out.println(localVariables.get(value).value);
@@ -265,8 +275,16 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
     public Object visitTerm(SimpleScriptParser.TermContext ctx) {
         Object result = visit(ctx.factor());
 
-        if (result instanceof String)
-            result = sourceVariable((String) result);
+        // Check if the result is a numeric literal
+        if (result instanceof String) {
+            String strResult = (String) result;
+            if (isNumeric(strResult)) {
+                result = parseValue(strResult); // Return the parsed numeric value
+            } else {
+                // Otherwise, treat it as a variable name
+                result = sourceVariable(strResult);
+            }
+        }
 
         if (ctx.term() != null) {
             Object nextFactorResult = visit(ctx.term());
@@ -278,6 +296,16 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
         }
 
         return result;
+    }
+
+    // Helper method to check if a string represents a numeric value
+    private boolean isNumeric(String str) {
+        try {
+            Double.parseDouble(str);
+            return true;
+        } catch (NumberFormatException e) {
+            return false;
+        }
     }
 
     @Override
@@ -295,65 +323,36 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
     }
 
     private Object multiply(Object a, Object b) {
-        try {
-            a = Integer.parseInt(String.valueOf(a));
-            b = Integer.parseInt(String.valueOf(b));
-
-        } catch (NumberFormatException e) {
-            try {
-                a = Float.parseFloat(String.valueOf(a));
-                b = Float.parseFloat(String.valueOf(b));
-            } catch (NumberFormatException ex) {
-                System.err.println("Error: Operands are not valid numbers");
-                System.exit(1);
-            }
-        }
+        // Perform multiplication
         if (a instanceof Integer && b instanceof Integer) {
-            return (int) b * (int) a;
-        } else if (a instanceof Float && b instanceof Float){
-            return (float) b * (float) a;
+            return (int) a * (int) b;
+        } else if (a instanceof Float || b instanceof Float) {
+            // Cast to float if any operand is float to preserve precision
+            return ((Number) a).floatValue() * ((Number) b).floatValue();
         } else {
             System.err.println("Error: Incorrect arguments for multiplication");
-            System.exit(1);
+            return null;
         }
-
-        return null;
     }
-
 
     private Object divide(Object a, Object b) {
-        try {
-            a = Integer.parseInt(String.valueOf(a));
-            b = Integer.parseInt(String.valueOf(b));
-
-        } catch (NumberFormatException e) {
-            try {
-                a = Float.parseFloat(String.valueOf(a));
-                b = Float.parseFloat(String.valueOf(b));
-            } catch (NumberFormatException ex) {
-                System.err.println("Error: Operands are not valid numbers");
-                System.exit(1);
-            }
-        }
+        // Perform division
         if (a instanceof Integer && b instanceof Integer) {
-            if ((int) b == 0) {
-                System.err.println("Error: Division by zero");
-                System.exit(1);
+            if ((int) a == 0) {
+                throw new ArithmeticException("Division by zero");
             }
             return (int) b / (int) a;
-        } else if(a instanceof Float && b instanceof Float) {
-            if ((float) b == 0.0) {
-                System.err.println("Error: Division by zero");
-                System.exit(1);
+        } else if (a instanceof Float || b instanceof Float) {
+            if (((Number) a).floatValue() == 0.0) {
+                throw new ArithmeticException("Division by zero");
             }
-            return (float) b / (float) a;
+            return ((Number) b).floatValue() / ((Number) a).floatValue();
         } else {
             System.err.println("Error: Incorrect arguments for division");
-            System.exit(1);
+            return null;
         }
-
-        return null;
     }
+
 
     @Override
     public Object visitArithmeticOperation(SimpleScriptParser.ArithmeticOperationContext ctx) {
@@ -361,55 +360,108 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
         Object left = null;
         String op = null;
 
-        if (right instanceof String)
-            right = sourceVariable((String) right);
-    
         if (ctx.getChildCount() > 1) {
             op = ctx.getChild(1).getText();
             left = visit(ctx.arithmeticOperation());
-
-            if (left instanceof String)
-                left = sourceVariable((String) left);
         }
 
-        try {
-            right = Integer.parseInt(String.valueOf(right));
-            if (left != null)
-                left = Integer.parseInt(String.valueOf(left));
-
-        } catch (NumberFormatException e) {
-            try {
-                right = Float.parseFloat(String.valueOf(right));
-                if (left != null)
-                    left = Float.parseFloat(String.valueOf(left));
-            } catch (NumberFormatException ex) {
-                System.err.println("Error: Operands are not valid numbers");
-                System.exit(1);
+        // Convert right operand to a literal value if it's a variable
+        if (right instanceof String) {
+            String rightVarName = (String) right;
+            if (currentScope().containsKey(rightVarName)) {
+                right = sourceVariable(rightVarName);
+            } else {
+                // If it's not a variable, treat it as a literal value
+                try {
+                    right = parseValue(rightVarName);
+                } catch (NumberFormatException e) {
+                    System.err.println("Error: Invalid value for right operand");
+                    System.exit(1);
+                }
             }
+        }
+
+        // Convert left operand to a literal value if it's a variable
+        if (left instanceof String) {
+            String leftVarName = (String) left;
+            if (currentScope().containsKey(leftVarName)) {
+                left = sourceVariable(leftVarName);
+            } else {
+                // If it's not a variable, treat it as a literal value
+                try {
+                    left = parseValue(leftVarName);
+                } catch (NumberFormatException e) {
+                    System.err.println("Error: Invalid value for left operand");
+                    System.exit(1);
+                }
+            }
+        }
+
+        // Now, both left and right operands should be literal values
+        // Perform type conversion if necessary
+        try {
+            if (left != null)
+                left = convertToNumber(left);
+            right = convertToNumber(right);
+        } catch (NumberFormatException e) {
+            System.err.println("Error: Operands are not valid numbers");
+            System.exit(1);
         }
 
         if (op == null) {
             return right;
         }
+
+        // Perform arithmetic operation
         switch (op) {
             case "+":
-                if (left instanceof Integer && right instanceof Integer) {
-                    return (int) left + (int) right;
-                } else if (left instanceof Float && right instanceof Float) {
-                    return (float) left + (float) right;
-                }
-                break;
+                return add(left, right);
             case "-":
-                if (left instanceof Integer && right instanceof Integer) {
-                    return (int) left - (int) right;
-                } else if (left instanceof Float && right instanceof Float) {
-                    return (float) left - (float) right;
-                }
-                break;
+                return subtract(left, right);
+            default:
+                System.err.println("Error: Unsupported operator: " + op);
+                System.exit(1);
+                return null;
         }
-
-        return null;
     }
+
+    // Helper method to convert operand to a number
+    private Object convertToNumber(Object operand) {
+        if (operand instanceof Integer || operand instanceof Float) {
+            return operand; // Already a number
+        } else if (operand instanceof String) {
+            return parseValue((String) operand);
+        } else {
+            throw new NumberFormatException();
+        }
+    }
+
+    // Helper method to perform addition
+    private Object add(Object left, Object right) {
+        if (left instanceof Integer && right instanceof Integer) {
+            return (int) left + (int) right;
+        } else if (left instanceof Float && right instanceof Float) {
+            return (float) left + (float) right;
+        } else {
+            System.err.println("Error: Unsupported operand types for addition");
+            System.exit(1);
+            return null;
+        }
+    }
+
+    // Helper method to perform subtraction
+    private Object subtract(Object left, Object right) {
+        if (left instanceof Integer && right instanceof Integer) {
+            return (int) left - (int) right;
+        } else if (left instanceof Float && right instanceof Float) {
+            return (float) left - (float) right;
+        } else {
+            System.err.println("Error: Unsupported operand types for subtraction");
+            System.exit(1);
+            return null;
+        }
+    }
+
 
     @Override
     public Object visitConditionalOperation(SimpleScriptParser.ConditionalOperationContext ctx) {
@@ -422,102 +474,141 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
             left = visit(ctx.conditionalOperation());
         }
 
-        if (left instanceof String)
-            left = sourceVariable((String) left);
-
-        if (right instanceof String)
-            right = sourceVariable((String) right);
-
+        // Check if left operand is a variable name
         if (left instanceof String) {
-            try {
-                left = parseValue((String) left);
-            } catch (NumberFormatException e) {
-                return null;
+            String leftVarName = (String) left;
+            if (currentScope().containsKey(leftVarName)) {
+                left = sourceVariable(leftVarName);
+            } else {
+                // If it's not a variable, treat it as a literal value
+                try {
+                    left = parseValue(leftVarName);
+                } catch (NumberFormatException e) {
+                    System.err.println("Error: Invalid value for left operand");
+                    System.exit(1);
+                }
             }
         }
 
+        // Check if right operand is a variable name
         if (right instanceof String) {
-            try {
-                right = parseValue((String) right);
-            } catch (NumberFormatException e) {
-                return null;
+            String rightVarName = (String) right;
+            if (currentScope().containsKey(rightVarName)) {
+                right = sourceVariable(rightVarName);
+            } else {
+                // If it's not a variable, treat it as a literal value
+                try {
+                    right = parseValue(rightVarName);
+                } catch (NumberFormatException e) {
+                    System.err.println("Error: Invalid value for right operand");
+                    System.exit(1);
+                }
             }
         }
-
 
         if (op == null) {
             return right;
         }
 
+        // Perform comparison based on the operator
         switch (op) {
             case ">":
-                if (left instanceof Integer && right instanceof Integer) {
-                    return (int) left > (int) right;
-                } else if (left instanceof Float && right instanceof Float) {
-                    return (float) left > (float) right;
-                }
-                break;
+                return compareGreaterThan(left, right);
             case ">=":
-                if (left instanceof Integer && right instanceof Integer) {
-                    return (int) left >= (int) right;
-                } else if (left instanceof Float && right instanceof Float) {
-                    return (float) left >= (float) right;
-                }
-                break;
+                return compareGreaterThanOrEqual(left, right);
             case "<":
-                if (left instanceof Integer && right instanceof Integer) {
-                    return (int) left < (int) right;
-                } else if (left instanceof Float && right instanceof Float) {
-                    return (float) left < (float) right;
-                }
-                break;
+                return compareLessThan(left, right);
             case "<=":
-                if (left instanceof Integer && right instanceof Integer) {
-                    return (int) left <= (int) right;
-                } else if (left instanceof Float && right instanceof Float) {
-                    return (float) left <= (float) right;
-                }
-                break;
+                return compareLessThanOrEqual(left, right);
             case "==":
-                if (left instanceof Integer && right instanceof Integer) {
-                    return (int) left == (int) right;
-                } else if (left instanceof Float && right instanceof Float) {
-                    return (float) left == (float) right;
-                }
-                break;
+                return compareEqual(left, right);
             case "!=":
-                if (left instanceof Integer && right instanceof Integer) {
-                    return (int) left != (int) right;
-                } else if (left instanceof Float && right instanceof Float) {
-                    return (float) left != (float) right;
-                }
-                break;
+                return compareNotEqual(left, right);
         }
 
         return null;
+    }
+
+    // Helper methods for comparison
+    private boolean compareGreaterThan(Object left, Object right) {
+        if (left instanceof Integer && right instanceof Integer) {
+            return (int) left > (int) right;
+        } else if (left instanceof Float && right instanceof Float) {
+            return (float) left > (float) right;
+        }
+        return false;
+    }
+
+    private boolean compareGreaterThanOrEqual(Object left, Object right) {
+        if (left instanceof Integer && right instanceof Integer) {
+            return (int) left >= (int) right;
+        } else if (left instanceof Float && right instanceof Float) {
+            return (float) left >= (float) right;
+        }
+        return false;
+    }
+
+    private boolean compareLessThan(Object left, Object right) {
+        if (left instanceof Integer && right instanceof Integer) {
+            return (int) left < (int) right;
+        } else if (left instanceof Float && right instanceof Float) {
+            return (float) left < (float) right;
+        }
+        return false;
+    }
+
+    private boolean compareLessThanOrEqual(Object left, Object right) {
+        if (left instanceof Integer && right instanceof Integer) {
+            return (int) left <= (int) right;
+        } else if (left instanceof Float && right instanceof Float) {
+            return (float) left <= (float) right;
+        }
+        return false;
+    }
+
+    private boolean compareEqual(Object left, Object right) {
+        if (left instanceof Integer && right instanceof Integer) {
+            return (int) left == (int) right;
+        } else if (left instanceof Float && right instanceof Float) {
+            return (float) left == (float) right;
+        }
+        return false;
+    }
+
+    private boolean compareNotEqual(Object left, Object right) {
+        if (left instanceof Integer && right instanceof Integer) {
+            return (int) left != (int) right;
+        } else if (left instanceof Float && right instanceof Float) {
+            return (float) left != (float) right;
+        }
+        return false;
     }
 
     @Override
     public Object visitLogicalTerm(SimpleScriptParser.LogicalTermContext ctx) {
         Object result = visit(ctx.logicalFactor());
 
+        // Check if the result is a variable name
         if (result instanceof String) {
-            result = sourceVariable((String) result);
+            String varName = (String) result;
+            if (currentScope().containsKey(varName)) {
+                result = sourceVariable(varName);
+            } else {
+                // If it's not a variable, treat it as a literal value
+                return result;
+            }
         }
 
-        if (ctx.logicalTerm() != null) {
+        if (ctx.OR() != null && ctx.logicalTerm() != null) {
             Object nextFactorResult = visit(ctx.logicalTerm());
 
-            if (ctx.OR() != null) {
-
-                try {
-                    boolean boolResult = result instanceof String ? (boolean) parseValue((String) result) : (boolean) result;
-                    boolean nextBoolResult = nextFactorResult instanceof String ? (boolean) parseValue((String) nextFactorResult) : (boolean) nextFactorResult;
-                    result = boolResult || nextBoolResult;
-                } catch (NumberFormatException e) {
-                    System.err.println("Error: Invalid boolean value");
-                    System.exit(1);
-                }
+            try {
+                boolean boolResult = result instanceof String ? (boolean) parseValue((String) result) : (boolean) result;
+                boolean nextBoolResult = nextFactorResult instanceof String ? (boolean) parseValue((String) nextFactorResult) : (boolean) nextFactorResult;
+                return boolResult || nextBoolResult;
+            } catch (NumberFormatException e) {
+                System.err.println("Error: Invalid boolean value");
+                System.exit(1);
             }
         }
 
@@ -528,21 +619,27 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
     public Object visitLogicalFactor(SimpleScriptParser.LogicalFactorContext ctx) {
         Object result = visit(ctx.logicalPrimary());
 
-        if (result instanceof String)
-            result = sourceVariable((String) result);
+        // Check if the result is a variable name
+        if (result instanceof String) {
+            String varName = (String) result;
+            if (currentScope().containsKey(varName)) {
+                result = sourceVariable(varName);
+            } else {
+                // If it's not a variable, treat it as a literal value
+                return result;
+            }
+        }
 
-        if (ctx.logicalFactor() != null) {
+        if (ctx.AND() != null && ctx.logicalFactor() != null) {
             Object nextFactorResult = visit(ctx.logicalFactor());
 
-            if (ctx.AND() != null) {
-                try {
-                    boolean boolResult = result instanceof String ? (boolean) parseValue((String) result) : (boolean) result;
-                    boolean nextBoolResult = nextFactorResult instanceof String ? (boolean) parseValue((String) nextFactorResult) : (boolean) nextFactorResult;
-                    result = boolResult && nextBoolResult;
-                } catch (NumberFormatException e) {
-                    System.err.println("Error: Invalid boolean value");
-                    System.exit(1);
-                }
+            try {
+                boolean boolResult = result instanceof String ? (boolean) parseValue((String) result) : (boolean) result;
+                boolean nextBoolResult = nextFactorResult instanceof String ? (boolean) parseValue((String) nextFactorResult) : (boolean) nextFactorResult;
+                return boolResult && nextBoolResult;
+            } catch (NumberFormatException e) {
+                System.err.println("Error: Invalid boolean value");
+                System.exit(1);
             }
         }
 
@@ -552,8 +649,20 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
     @Override
     public Object visitLogicalPrimary(SimpleScriptParser.LogicalPrimaryContext ctx) {
         if (ctx.value() != null) {
-            return visit(ctx.value());
+            Object result = visit(ctx.value());
 
+            // Check if the result is a variable name
+            if (result instanceof String) {
+                String varName = (String) result;
+                if (currentScope().containsKey(varName)) {
+                    result = sourceVariable(varName);
+                } else {
+                    // If it's not a variable, treat it as a literal value
+                    return result;
+                }
+            }
+
+            return result;
         } else if (ctx.logicalPrimary() != null) {
             Object result = visit(ctx.logicalPrimary());
 
@@ -561,37 +670,33 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
                 boolean boolResult = result instanceof String ? (boolean) parseValue((String) result) : (boolean) result;
                 return !boolResult;
             } catch (NumberFormatException e) {
-                System.out.println("Invalid boolean value");
+                System.err.println("Error: Invalid boolean value");
+                System.exit(1);
             }
-
         } else if (ctx.conditionalOperation() != null) {
             return visit(ctx.conditionalOperation());
         }
 
         return null;
     }
-    
+
     @Override
     public Object visitValue(SimpleScriptParser.ValueContext ctx) {
-
         if (ctx.NAME() != null) {
             String variableName = ctx.NAME().getText();
-
-            if (!variables.get(currentInstruction).containsKey(variableName) && !variables.get(0).containsKey(variableName)) {
+            // Check if the variable exists in the current scope
+            if (!currentScope().containsKey(variableName)) {
                 System.err.println("Error: Variable '" + variableName + "' is not defined.");
                 System.exit(1);
             }
-        }
-
-        if (ctx.NAME() != null) {
-            return ctx.NAME().getText();
+            return variableName; // Return variable name
         } else if (ctx.STRING() != null) {
             String text = ctx.STRING().getText();
-            return text.substring(1, text.length() - 1);
+            return text.substring(1, text.length() - 1); // Return string value without quotes
         } else if (ctx.NUMBER() != null) {
-            return ctx.NUMBER().getText();
+            return ctx.NUMBER().getText(); // Return number value
         } else if (ctx.BOOLEAN() != null) {
-            return ctx.BOOLEAN().getText();
+            return ctx.BOOLEAN().getText(); // Return boolean value
         }
 
         return null;
@@ -625,10 +730,10 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
         }
     
         // Update the variable value
-        Map<String, Variable> localVariables = variables.get(currentInstruction);
+        Map<String, Variable> localVariables = currentScope();
         if (localVariables.containsKey(variableName)) {
             Variable variable = new Variable(localVariables.get(variableName).getType(), value);
-            variables.get(currentInstruction).put(variableName, variable);
+            localVariables.put(variableName, variable);
         } else {
             System.err.println("Error: Variable '" + variableName + "' has not been declared");
             System.exit(1);
@@ -639,10 +744,17 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
 
     @Override
     public Object visitBlock(SimpleScriptParser.BlockContext ctx) {
+        // Create a new scope that inherits from the parent scope
+//        Map<String, Variable> blockScope = new HashMap<>(currentScope());
+//        scopeStack.push(blockScope);
 
-        for (SimpleScriptParser.StatementContext statement : ctx.statement()) {
-            visit(statement);
+        // Visit each statement in the block
+        for (SimpleScriptParser.StatementContext statementContext : ctx.statement()) {
+            visit(statementContext);
         }
+
+        // Pop the block scope from the stack after visiting all statements
+//        scopeStack.pop();
 
         return null;
     }
@@ -701,13 +813,10 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
         }
 
         Map<String, Variable> parameters = new LinkedHashMap<>();
-
-        if (ctx.NAME().size() > 1) {
-            for (int i = 1; i < ctx.NAME().size(); i++) {
-                String type = ctx.TYPE(i).getText();
-                String name = ctx.NAME(i).getText();
-                parameters.put(name, new Variable(type, null));
-            }
+        for (int i = 1; i < ctx.NAME().size(); i++) {
+            String type = ctx.TYPE(i).getText();
+            String name = ctx.NAME(i).getText();
+            parameters.put(name, new Variable(type, null));
         }
 
         List<SimpleScriptParser.StatementContext> blockContext = ctx.statement();
@@ -719,12 +828,9 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
 
         FunctionInfo functionInfo = new FunctionInfo(returnType, blockContext, parameters.size());
         functionInfo.setReturnStatementContext(ctx.returnStatement());
-        currentInstruction = functionInfo.functionID;
+        functionInfo.parameters = parameters;
 
-        variables.put(functionInfo.functionID, parameters);
         functions.put(functionName, functionInfo);
-
-        currentInstruction = 0;
 
         return null;
     }
@@ -732,33 +838,47 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
     @Override
     public Object visitFunctionInvocation(SimpleScriptParser.FunctionInvocationContext ctx) {
         String functionName = ctx.NAME().getText();
+
+        if (!functions.containsKey(functionName)) {
+            exitProgram("Error: Function '" + functionName + "' is not defined.");
+        }
+
         FunctionInfo functionInfo = functions.get(functionName);
+        List<SimpleScriptParser.ExprContext> arguments = ctx.expr();
 
-        if (Objects.isNull(functionInfo)) {
-            System.out.println("Function '" + functionName + "' is not defined.");
-            System.exit(0);
+        if (arguments.size() != functionInfo.parametersCount) {
+            exitProgram("Error: Function '" + functionName + "' expects " + functionInfo.parametersCount + " arguments, but got " + arguments.size());
         }
 
-        currentInstruction = functionInfo.getFunctionID();
+        // Create a new scope for the function call
+        Map<String, Variable> localVariables = new HashMap<>();
+        scopeStack.push(localVariables);
 
-        Iterator<Map.Entry<String, Variable>> iterator = variables.get(currentInstruction).entrySet().iterator();
-        int count = 0;
-
-        while (iterator.hasNext()) {
-            Map.Entry<String, Variable> entry = iterator.next();
-            if (count >= functionInfo.parametersCount) {
-                iterator.remove();
-            }
-            count++;
+        // Assign the arguments to the parameters
+        List<String> parameterNames = new ArrayList<>(functionInfo.parameters.keySet());
+        for (int i = 0; i < arguments.size(); i++) {
+            Object value = visit(arguments.get(i));
+            String parameterName = parameterNames.get(i);
+            Variable parameter = functionInfo.parameters.get(parameterName);
+            parameter.setValue(value);
+            localVariables.put(parameterName, parameter);
         }
 
-        int idx = 0;
-
-        for (var argument : variables.get(currentInstruction).entrySet()) {
-            argument.getValue().setValue(visit(ctx.expr(idx++)));
+        // Execute the function block
+        for (SimpleScriptParser.StatementContext statement : functionInfo.getBlock()) {
+            visit(statement);
         }
 
-        return executeFunction(functionName);
+        // Handle return statement
+        if (functionInfo.returnStatementContext != null) {
+            Object returnValue = visit(functionInfo.returnStatementContext.expr());
+            scopeStack.pop(); // Remove the function scope
+            return returnValue;
+        }
+
+        scopeStack.pop(); // Remove the function scope
+
+        return null;
     }
 
     @Override
@@ -789,32 +909,53 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
 
     @Override
     public Object visitWhileLoop(SimpleScriptParser.WhileLoopContext ctx) {
+
+
+        // Evaluate the initial condition
         boolean condition = (boolean) visit(ctx.conditionalOperation());
 
         while (condition) {
+            // Enter the loop block
+            scopeStack.push(new HashMap<>(currentScope()));
             visit(ctx.block());
+
+            // After executing the loop block, pop its scope
+            scopeStack.pop();
+
+            // Re-evaluate the loop condition
             condition = (boolean) visit(ctx.conditionalOperation());
         }
+
+        // Pop the scope for the while loop
+//        scopeStack.pop();
 
         return null;
     }
 
     @Override
     public Object visitForLoop(SimpleScriptParser.ForLoopContext ctx) {
+        scopeStack.push(new HashMap<>(currentScope()));
         SimpleScriptParser.VariableDefinitionContext variableDefinitionContext = ctx.variableDefinition();
         SimpleScriptParser.ConditionalOperationContext conditionalOperationContext = ctx.conditionalOperation();
         SimpleScriptParser.SingleValueOperationContext singleValueOperationContext = ctx.singleValueOperation();
         SimpleScriptParser.VariableAssignmentContext variableAssignmentContext = ctx.variableAssignment();
 
-        visitVariableDefinition(variableDefinitionContext); 
-        while ((boolean) visit(conditionalOperationContext)) { 
+        // Visit and add loop variable to the current scope
+        visitVariableDefinition(variableDefinitionContext);
+
+        while ((boolean) visit(conditionalOperationContext)) {
+            scopeStack.push(new HashMap<>(currentScope()));
             visit(ctx.block());
+            scopeStack.pop();
             if (singleValueOperationContext != null) {
                 visitSingleValueOperation(singleValueOperationContext);
             } else if (variableAssignmentContext != null) {
                 visitVariableAssignment(variableAssignmentContext);
             }
+
         }
+        // Pop the loop scope from the stack after the loop completes
+        scopeStack.pop();
 
         return null;
     }
@@ -881,6 +1022,7 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
         String type = ctx.arrayType().TYPE().getText() + "[" + "]";
         String name = ctx.NAME().getText();
         Object arguments = new ArrayList<>();
+        Map<String, Variable> localVariables = currentScope();
 
         if (ctx.arguments() != null) {
             arguments = visit(ctx.arguments());
@@ -888,7 +1030,7 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
 
         Variable variable = new Variable(type, arguments);
 
-        variables.get(currentInstruction).put(name, variable);
+        localVariables.put(name, variable);
 
         return null;
     }
@@ -903,7 +1045,7 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
 
         if (index instanceof Integer && index instanceof Integer) {
             int intIndex = (int) index;
-            Map<String, Variable> localVariables = variables.get(currentInstruction);
+            Map<String, Variable> localVariables = currentScope();
             if (!localVariables.containsKey(arrayName)) {
                 System.err.println("Error: Array '" + arrayName + "' has not been declared");
                 System.exit(1);
@@ -947,15 +1089,15 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
         return null;
     }
 
-    private Object sourceVariable(String variable) {
-
-        if (variables.get(currentInstruction).containsKey(variable)) {
-             return variables.get(currentInstruction).get(variable).getValue();
-        } else if (variables.get(0).containsKey(variable)) {
-             return variables.get(0).get(variable).getValue();
+    private Object sourceVariable(String name) {
+        for (Map<String, Variable> scope : scopeStack) {
+            if (scope.containsKey(name)) {
+                return scope.get(name).getValue();
+            }
         }
-
-        return variable;
+        System.err.println("Error: Variable '" + name + "' has not been declared");
+        System.exit(1);
+        return null;  // Unreachable but required for compilation
     }
 
     private Object parseValue(String value) {
