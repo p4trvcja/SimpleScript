@@ -5,9 +5,11 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
     private int currentInstruction = 0;
     private final Map<String, FunctionInfo> functions = new HashMap<>();
     private final Map<Integer, Map<String, Variable>> variables = new HashMap<>();
+    private final Stack<Integer> executionStack = new Stack<>();
 
     public InterpretVisitor() {
         super();
+        executionStack.push(0);
         variables.put(0, new HashMap<>());
     }
     
@@ -653,6 +655,7 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
         try {
             for (Map.Entry<String, FunctionInfo> function : functions.entrySet()) {
                 FunctionInfo functionInfo = function.getValue();
+
                 if (functionInfo.functionID == currentInstruction) {
                     Object returnValue = visit(ctx.expr());
 
@@ -660,12 +663,13 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
                         returnValue = sourceVariable((String) returnValue);
                     }
 
-                    currentInstruction = 0;
+                    executionStack.pop();
+                    currentInstruction = executionStack.peek();
 
                     return switch (functionInfo.returnType) {
-                        case "int" -> (int) returnValue;
-                        case "float" -> (float) returnValue;
-                        case "bool" -> Boolean.parseBoolean((String) returnValue);
+                        case "int" -> returnValue instanceof String ? Integer.parseInt((String) returnValue) : (int) returnValue;
+                        case "float" -> returnValue instanceof String ? Float.parseFloat((String) returnValue) : (float) returnValue;
+                        case "bool" -> returnValue instanceof String ? Boolean.parseBoolean((String) returnValue) : (boolean) returnValue;
                         case "string" -> returnValue;
                         default -> throw new IllegalStateException("Error: Unexpected value: " + functionInfo.returnType);
                     };
@@ -677,7 +681,8 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
             exitProgram("Error: Return type and value type don't match");
         }
 
-        currentInstruction = 0;
+        executionStack.pop();
+        currentInstruction = executionStack.peek();
 
         return null;
     }
@@ -741,6 +746,8 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
 
         currentInstruction = functionInfo.getFunctionID();
 
+        executionStack.push(currentInstruction);
+
         Iterator<Map.Entry<String, Variable>> iterator = variables.get(currentInstruction).entrySet().iterator();
         int count = 0;
 
@@ -755,7 +762,13 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
         int idx = 0;
 
         for (var argument : variables.get(currentInstruction).entrySet()) {
-            argument.getValue().setValue(visit(ctx.expr(idx++)));
+            Object value = visit(ctx.expr(idx++));
+
+            if (value instanceof String)
+                value = sourceVariable((String) value);
+
+
+            argument.getValue().setValue(value);
         }
 
         return executeFunction(functionName);
@@ -928,6 +941,7 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
     }
 
     private Object executeFunction(String functionName) {
+
         FunctionInfo functionInfo = functions.get(functionName);
 
         if (functionInfo == null) {
@@ -943,7 +957,10 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
             return visit(functionInfo.returnStatementContext);
         }
 
-        currentInstruction = 0;
+        executionStack.pop();
+
+        currentInstruction = executionStack.peek();
+
         return null;
     }
 
