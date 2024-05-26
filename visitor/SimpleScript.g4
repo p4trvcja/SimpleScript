@@ -86,6 +86,7 @@ term: factor
     ;
 
 factor: value
+      | functionInvocation
       | '(' expr ')'
       ;
 

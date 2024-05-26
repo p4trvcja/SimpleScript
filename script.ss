@@ -1,12 +1,12 @@
-int sum(int a, int b) {
-    return(a + b);
+
+
+int calculateFactorial(int n){
+    if(n == 0){
+        return(1);
+    }else{
+        return(2);
+    }
 };
 
-int x(int d) {
-    print(sum(3, 5));
-    print(d);
-    return(10);
-};
-
-x(30);
-print(sum(1, 2));
+int number = 5;
+print(calculateFactorial(number));

@@ -314,6 +314,8 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
             return visit(ctx.value());
         } else if (ctx.expr() != null) {
             return visit(ctx.expr());
+        }else if (ctx.functionInvocation() != null){
+            return visitFunctionInvocation(ctx.functionInvocation());
         } else {
             System.err.println("Error: Incorrect factor context");
             System.exit(1);
@@ -689,7 +691,7 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
                 System.err.println("Error: Variable '" + variableName + "' is not defined.");
                 System.exit(1);
             }
-            return variableName; // Return variable name
+            return sourceVariable(variableName); // Return variable name
         } else if (ctx.STRING() != null) {
             String text = ctx.STRING().getText();
             return text.substring(1, text.length() - 1); // Return string value without quotes
@@ -851,8 +853,11 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
         }
 
         // Create a new scope for the function call
-        Map<String, Variable> localVariables = new HashMap<>();
-        scopeStack.push(localVariables);
+
+        scopeStack.push(new HashMap<>(currentScope()));
+
+        Map<String, Variable> localVariables = scopeStack.peek();
+
 
         // Assign the arguments to the parameters
         List<String> parameterNames = new ArrayList<>(functionInfo.parameters.keySet());
