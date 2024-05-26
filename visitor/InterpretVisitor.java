@@ -978,6 +978,48 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
     }
 
     @Override
+    public Object visitForLoopArray(SimpleScriptParser.ForLoopArrayContext ctx) {
+        // Create a new scope for the loop
+        scopeStack.push(new HashMap<>(currentScope()));
+
+        // Get the parameter and array name
+        SimpleScriptParser.ParameterContext parameterCtx = ctx.parameter();
+        String paramName = parameterCtx.NAME().getText();
+        if(scopeStack.peek().containsKey(paramName)) {
+            System.err.println("Duplicate Error: Variable '" + paramName + "' has been declared");
+            System.exit(1);
+        }
+        String arrayName = ctx.NAME().getText();
+
+        // Get the array variable
+        Variable arrayVariable = currentScope().get(arrayName);
+        if (arrayVariable == null || !(arrayVariable.getValue() instanceof List<?>)) {
+            System.err.println("Variable " + arrayName + " is not an array or is not defined.");
+            System.exit(1);
+        }
+
+        List<?> array = (List<?>) arrayVariable.getValue();
+
+        for (Object element : array) {
+            // Create a new scope for each iteration
+            scopeStack.push(new HashMap<>(currentScope()));
+            // Define the loop variable with the current element
+            currentScope().put(paramName, new Variable("var", element));
+
+            // Execute the block
+            visit(ctx.block());
+
+            // Pop the inner loop scope
+            scopeStack.pop();
+        }
+
+        // Pop the loop scope
+        scopeStack.pop();
+
+        return null;
+    }
+
+    @Override
     public Object visitArguments(SimpleScriptParser.ArgumentsContext ctx) {
         List<Object> values = new ArrayList<>();
         String type;
