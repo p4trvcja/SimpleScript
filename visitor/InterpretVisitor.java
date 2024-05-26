@@ -935,13 +935,25 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
     @Override
     public Object visitForLoop(SimpleScriptParser.ForLoopContext ctx) {
         scopeStack.push(new HashMap<>(currentScope()));
-        SimpleScriptParser.VariableDefinitionContext variableDefinitionContext = ctx.variableDefinition();
+        boolean isList = false;
+        if(ctx.variableDefinition() != null) {
+            SimpleScriptParser.VariableDefinitionContext variableDefinitionContext = ctx.variableDefinition();
+            visitVariableDefinition(variableDefinitionContext);
+        } else {
+            SimpleScriptParser.VariableAssignmentContext variableAssignmentContext1 = ctx.variableAssignment(0);
+            visitVariableAssignment(variableAssignmentContext1);
+            isList = true;
+        }
         SimpleScriptParser.ConditionalOperationContext conditionalOperationContext = ctx.conditionalOperation();
         SimpleScriptParser.SingleValueOperationContext singleValueOperationContext = ctx.singleValueOperation();
-        SimpleScriptParser.VariableAssignmentContext variableAssignmentContext = ctx.variableAssignment();
+        SimpleScriptParser.VariableAssignmentContext variableAssignmentContext;
+        if(isList) {
+            variableAssignmentContext = ctx.variableAssignment(1);
+        } else {
+            variableAssignmentContext = ctx.variableAssignment(0);
+        }
 
         // Visit and add loop variable to the current scope
-        visitVariableDefinition(variableDefinitionContext);
 
         while ((boolean) visit(conditionalOperationContext)) {
             scopeStack.push(new HashMap<>(currentScope()));

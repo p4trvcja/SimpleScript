@@ -140,7 +140,7 @@ iterationStatement: whileLoop
 whileLoop : WHILE LPAREN conditionalOperation RPAREN block; 
 
 // for
-forLoop : FOR LPAREN variableDefinition conditionalOperation SEMICOLON (singleValueOperation | variableAssignment) RPAREN block;
+forLoop : FOR LPAREN (variableDefinition | variableAssignment SEMICOLON) conditionalOperation SEMICOLON (singleValueOperation | variableAssignment) RPAREN block;
 
 forLoopArray : FOR LPAREN parameter IN NAME RPAREN block; 
 
