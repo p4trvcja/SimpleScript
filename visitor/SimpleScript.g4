@@ -113,9 +113,9 @@ stringOperation: concatenationOperation
                  | findOperation
                  ;
 
-concatenationOperation: (STRING | NAME) CONCAT (STRING | NAME);
+concatenationOperation: str CONCATSTR str;
 
-findOperation: FIND LPAREN (STRING | NAME) IN (STRING | NAME) RPAREN;
+findOperation: FIND LPAREN str IN str RPAREN;
 
 // Array operations
 arrayOperation: reverseOperation 
@@ -165,8 +165,13 @@ value: NAME
        | STRING	 
        ; 
 
+str: STRING 
+     | NAME
+     ;
 
 CONCAT: '+';
+
+CONCATSTR: 'concat';
 
 SUB: '-';
 

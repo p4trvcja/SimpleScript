@@ -1,6 +1,8 @@
 package visitor;
 import java.util.*;
 
+import org.antlr.v4.runtime.tree.TerminalNode;
+
 public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
     private int currentInstruction = 0;
     private final Map<String, FunctionInfo> functions = new HashMap<>();
@@ -1128,11 +1130,58 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
         return null;
     }
 
+    @Override
+    public Object visitStringOperation(SimpleScriptParser.StringOperationContext ctx) {
+        if (ctx.concatenationOperation() != null) {
+            return visitConcatenationOperation(ctx.concatenationOperation());
+        } else if (ctx.findOperation() != null) {
+            return visitFindOperation(ctx.findOperation());
+        }
+        return null;
+    }
+
+    @Override
+    public Object visitConcatenationOperation(SimpleScriptParser.ConcatenationOperationContext ctx) {
+        String left = ctx.children.get(0).getText();
+        left = findVar(left);
+        
+        String right = ctx.children.get(2).getText();
+        right = findVar(right);
+
+        return left + right;
+    }
+
+    @Override
+    public Object visitFindOperation(SimpleScriptParser.FindOperationContext ctx) {
+        String needle = ctx.children.get(2).getText();
+        needle = findVar(needle);
+
+        String haystack = ctx.children.get(4).getText();
+        haystack = findVar(haystack);
+
+        return haystack.indexOf(needle);
+    }
+
+    private String findVar(String str) {
+        if(currentScope().containsKey(str)) {
+            Variable var = currentScope().get(str);
+            if (var == null || !(var.getValue() instanceof String)) {
+                System.err.println("Variable " + str + " is not a string or is not defined.");
+                System.exit(1);
+            }
+            str = var.getValue().toString();
+        } else {
+            str = str.substring(1, str.length()-1);
+        }
+        return str;
+    }
+
+
     private Object executeFunction(String functionName) {
         FunctionInfo functionInfo = functions.get(functionName);
 
         if (functionInfo == null) {
-            System.out.println("Error: Function '" + functionName + "' is not defined.");
+            System.err.println("Error: Function '" + functionName + "' is not defined.");
             System.exit(0);
         }
 
