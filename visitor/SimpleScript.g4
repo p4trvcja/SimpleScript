@@ -72,6 +72,7 @@ expr: value
       | stringOperation
       | returnStatement
       | arrayAccess
+      | arrayOperation
       ; 
 
 // basic operations
@@ -154,8 +155,11 @@ conditionalStatement:  ifCondition
 ifCondition : IF LPAREN conditionalOperation RPAREN block (ELIF LPAREN conditionalOperation RPAREN block)* (ELSE block)?; 
 
 //switch
-switchCondition : SWITCH LPAREN NAME RPAREN LBRACE (CASE value COLON statement* (BREAK SEMICOLON)? )* (DEFAULT COLON statement* (BREAK SEMICOLON)? )? RBRACE;
+switchCondition : SWITCH LPAREN NAME RPAREN LBRACE caseClause* defaultClause? RBRACE;
 
+caseClause: CASE value COLON statement* (BREAK SEMICOLON)?;
+
+defaultClause: DEFAULT COLON statement* (BREAK SEMICOLON)?;
 
 // OPERATORS, VARIABLES 
 

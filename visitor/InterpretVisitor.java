@@ -1,7 +1,6 @@
 package visitor;
+import java.text.NumberFormat;
 import java.util.*;
-
-import org.antlr.v4.runtime.tree.TerminalNode;
 
 public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
     private int currentInstruction = 0;
@@ -268,7 +267,9 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
             return visitStringOperation(ctx.stringOperation());
         } else if(ctx.arrayAccess() != null){
             return visitArrayAccess(ctx.arrayAccess());
-        }else {
+        } else if (ctx.arrayOperation() != null) {
+            return visitArrayOperation(ctx.arrayOperation());
+        } else {
             return null;
         }
     }
@@ -1131,6 +1132,111 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
     }
 
     @Override
+    public Object visitArrayOperation(SimpleScriptParser.ArrayOperationContext ctx) {
+        if (ctx.reverseOperation() != null) {
+            return visitReverseOperation(ctx.reverseOperation());
+        } else if (ctx.addOperation() != null) {
+            return visitAddOperation(ctx.addOperation());
+        }
+        return null;
+    }
+
+    @Override
+    public Object visitReverseOperation(SimpleScriptParser.ReverseOperationContext ctx) {
+        String arrayName = ctx.NAME().getText();
+        Variable arrayVar = currentScope().get(arrayName);
+
+        if (arrayVar == null || !(arrayVar.getValue() instanceof List)) {
+            System.err.println("Variable " + arrayName + " is not an array or is not defined.");
+            System.exit(1);
+        }
+
+        List<Object> array = (List<Object>) arrayVar.getValue();
+        Collections.reverse(array);
+        return array;
+    }
+
+    @Override
+    public Object visitAddOperation(SimpleScriptParser.AddOperationContext ctx) {
+        String arrayName = ctx.NAME().getText();
+        Variable arrayVar = currentScope().get(arrayName);
+        String arrType = arrayVar.getType().substring(0, arrayVar.getType().length() - 2);
+
+        if (arrayVar == null || !(arrayVar.getValue() instanceof List)) {
+            System.err.println("Variable " + arrayName + " is not an array or is not defined.");
+            System.exit(1);
+        }
+
+        List<Object> array = (List<Object>) arrayVar.getValue();
+        
+        Object valueToAdd = visit(ctx.expr());
+        if(arrType.equals("int")) {
+            try {
+                int value = Integer.parseInt(valueToAdd.toString());
+                array.add(value);
+            } catch(Exception e) {
+                System.err.println("Type of variable: " + valueToAdd.getClass() + " does not match with array type: " + arrType);
+                System.exit(1);
+            }
+        } else if(arrType.equals("double")) {
+            try {
+                double value = Double.parseDouble(valueToAdd.toString());
+                array.add(value);
+            } catch(Exception e) {
+                System.err.println("Type of variable: " + valueToAdd.getClass() + " does not match with array type: " + arrType);
+                System.exit(1);
+            }
+        } else if(arrType.equals("string")) {
+            array.add(valueToAdd);
+        }
+        // array.add(valueToAdd);
+        return null;
+    }
+
+    @Override
+    public Object visitSwitchCondition(SimpleScriptParser.SwitchConditionContext ctx) {
+        String switchVariableName = ctx.NAME().getText();
+        Variable switchVariable = currentScope().get(switchVariableName);
+
+        if (switchVariable == null) {
+            throw new RuntimeException("Variable " + switchVariableName + " is not defined.");
+        }
+
+        Object switchValue = switchVariable.getValue();
+        boolean caseMatched = false;
+
+        // Iterate through all case clauses
+        for (SimpleScriptParser.CaseClauseContext caseCtx : ctx.caseClause()) {
+            Object caseValue = visit(caseCtx.value());
+
+            if (caseMatched || switchValue.equals(caseValue)) {
+                caseMatched = true;
+                for (SimpleScriptParser.StatementContext stmtCtx : caseCtx.statement()) {
+                    visit(stmtCtx);
+                }
+            }
+
+            if (caseMatched && caseCtx.BREAK() != null) {
+                return null;
+            }
+        }
+
+        // If no case matched or fall-through occurs, execute the default clause if it exists
+        if (caseMatched && ctx.defaultClause() != null) {
+            for (SimpleScriptParser.StatementContext stmtCtx : ctx.defaultClause().statement()) {
+                visit(stmtCtx);
+            }
+        } else if (!caseMatched && ctx.defaultClause() != null) {
+            for (SimpleScriptParser.StatementContext stmtCtx : ctx.defaultClause().statement()) {
+                visit(stmtCtx);
+            }
+        }
+
+        return null;
+    }
+
+
+    @Override
     public Object visitStringOperation(SimpleScriptParser.StringOperationContext ctx) {
         if (ctx.concatenationOperation() != null) {
             return visitConcatenationOperation(ctx.concatenationOperation());
@@ -1220,7 +1326,9 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
                 }
             }
         }
-
+        // System.err.println("Cannot cast" + value + "to a specific type.");
+        // System.exit(1);
+        // return null;
         throw new NullPointerException();
     }
 }
