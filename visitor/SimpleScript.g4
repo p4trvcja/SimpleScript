@@ -31,7 +31,7 @@ variableAssignment : NAME (ASSIGNMENT | ASSIGN)  expr;
 // functions
 returnStatement : RETURN LPAREN expr RPAREN SEMICOLON;
 
-functionDeclaration : (TYPE | arrayType) NAME LPAREN ((TYPE | arrayType) NAME ((COMMA (TYPE | arrayType) NAME)*))? RPAREN LBRACE statement* returnStatement? RBRACE SEMICOLON;
+functionDeclaration : (TYPE | arrayType) NAME LPAREN ((TYPE | arrayType) NAME ((COMMA (TYPE | arrayType) NAME)*))? RPAREN LBRACE block RBRACE SEMICOLON;
 
 functionInvocation: NAME LPAREN (RPAREN | expr RPAREN | expr (COMMA expr)+ RPAREN);
 
@@ -131,7 +131,7 @@ addOperation: ADD LPAREN NAME COMMA expr RPAREN;
 
 // COMPLEX STATEMENTS
 
-block : LBRACE statement* RBRACE;
+block : LBRACE statement* returnStatement? RBRACE;
 
 // loops
 iterationStatement: whileLoop 

@@ -6,6 +6,7 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
     private final Map<String, FunctionInfo> functions = new HashMap<>();
     //private final Map<Integer, Map<String, Variable>> variables = new HashMap<>();
     private final Deque<Map<String, Variable>> scopeStack = new ArrayDeque<>();
+    private final Stack<FunctionInfo> functionStack = new Stack<>();
 
     public InterpretVisitor() {
         super();
@@ -50,19 +51,18 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
         private static int ID = 1;
         private final String returnType;
         private final int parametersCount;
-        private final List<SimpleScriptParser.StatementContext> block;
-        private SimpleScriptParser.ReturnStatementContext returnStatementContext;
+        private final SimpleScriptParser.BlockContext block;
         private final int functionID = ID++;
         public Map<String, Variable> parameters; // Add this line
 
-        public FunctionInfo(String returnType, List<SimpleScriptParser.StatementContext> block, int parametersCount) {
+        public FunctionInfo(String returnType, SimpleScriptParser.BlockContext block, int parametersCount) {
             this.returnType = returnType;
             this.block = block;
             this.parametersCount = parametersCount;
             this.parameters = new LinkedHashMap<>();
         }
 
-        public List<SimpleScriptParser.StatementContext> getBlock() {
+        public SimpleScriptParser.BlockContext getBlock() {
             return block;
         }
 
@@ -74,9 +74,6 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
             return functionID;
         }
 
-        public void setReturnStatementContext(SimpleScriptParser.ReturnStatementContext returnStatementContext) {
-            this.returnStatementContext = returnStatementContext;
-        }
 
         @Override
         public String toString() {
@@ -748,51 +745,61 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
     @Override
     public Object visitBlock(SimpleScriptParser.BlockContext ctx) {
         // Create a new scope that inherits from the parent scope
-//        Map<String, Variable> blockScope = new HashMap<>(currentScope());
-//        scopeStack.push(blockScope);
+        Map<String, Variable> blockScope = new HashMap<>(currentScope());
+        scopeStack.push(blockScope);
 
         // Visit each statement in the block
         for (SimpleScriptParser.StatementContext statementContext : ctx.statement()) {
-            visit(statementContext);
+            var value = visit(statementContext);
+            if (value != null)
+                return value;
+        }
+
+        if (ctx.returnStatement() != null) {
+
+            return visit(ctx.returnStatement());
         }
 
         // Pop the block scope from the stack after visiting all statements
-//        scopeStack.pop();
+        scopeStack.pop();
 
         return null;
     }
 
     @Override
     public Object visitReturnStatement(SimpleScriptParser.ReturnStatementContext ctx) {
+        FunctionInfo functionInfo = functionStack.pop();
 
         try {
-            for (Map.Entry<String, FunctionInfo> function : functions.entrySet()) {
-                FunctionInfo functionInfo = function.getValue();
-                if (functionInfo.functionID == currentInstruction) {
-                    Object returnValue = visit(ctx.expr());
+            Object returnValue = visit(ctx.expr());
 
-                    if (returnValue instanceof String) {
-                        returnValue = sourceVariable((String) returnValue);
-                    }
-
-                    currentInstruction = 0;
-
-                    return switch (functionInfo.returnType) {
-                        case "int" -> (int) returnValue;
-                        case "float" -> (float) returnValue;
-                        case "bool" -> Boolean.parseBoolean((String) returnValue);
-                        case "string" -> returnValue;
-                        default -> throw new IllegalStateException("Error: Unexpected value: " + functionInfo.returnType);
+            return switch (functionInfo.returnType) {
+                        case "int" -> Integer.valueOf((String) returnValue);
+                        case "float" -> Float.valueOf((String) returnValue);
+                        case "bool" -> Boolean.valueOf((String) returnValue);
+                        default -> throw new RuntimeException();
                     };
-                }
+
+        } catch (Exception e1) {
+
+            Object returnValue = visit(ctx.expr());
+
+            if (returnValue instanceof String) {
+                returnValue = sourceVariable((String) returnValue);
             }
 
-            exitProgram("Error: Function is not defined.");
-        } catch (Exception e) {
-            exitProgram("Error: Return type and value type don't match");
+            try {
+                return switch (functionInfo.returnType) {
+                    case "int" -> Integer.valueOf((String) returnValue);
+                    case "float" -> Float.valueOf((String) returnValue);
+                    case "bool" -> Boolean.valueOf((String) returnValue);
+                    default -> throw new RuntimeException();
+                };
+            } catch (Exception e2) {
+                System.out.println(e2);
+                exitProgram("Error: Return type and value type don't match");
+            }
         }
-
-        currentInstruction = 0;
 
         return null;
     }
@@ -807,12 +814,8 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
         String returnType = ctx.TYPE(0).getText();
         String functionName = ctx.NAME(0).getText();
 
-        if (ctx.returnStatement() != null && returnType.equals("void")) {
+        if (ctx.block().returnStatement() != null && returnType.equals("void")) {
             exitProgram("Error: Void functions cannot contain a return statement.");
-        }
-
-        if (ctx.returnStatement() == null && !returnType.equals("void")) {
-            exitProgram("Error: Function of the return type " + returnType + " should return a value.");
         }
 
         Map<String, Variable> parameters = new LinkedHashMap<>();
@@ -822,15 +825,14 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
             parameters.put(name, new Variable(type, null));
         }
 
-        List<SimpleScriptParser.StatementContext> blockContext = ctx.statement();
+        SimpleScriptParser.BlockContext block = ctx.block();
 
-        if (blockContext.isEmpty() && returnType.equals("void")) {
+        if (block.statement().isEmpty() && returnType.equals("void")) {
             System.err.println("Error: Block context not found.");
             System.exit(1);
         }
 
-        FunctionInfo functionInfo = new FunctionInfo(returnType, blockContext, parameters.size());
-        functionInfo.setReturnStatementContext(ctx.returnStatement());
+        FunctionInfo functionInfo = new FunctionInfo(returnType, block, parameters.size());
         functionInfo.parameters = parameters;
 
         functions.put(functionName, functionInfo);
@@ -848,6 +850,8 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
 
         FunctionInfo functionInfo = functions.get(functionName);
         List<SimpleScriptParser.ExprContext> arguments = ctx.expr();
+
+        functionStack.push(functionInfo);
 
         if (arguments.size() != functionInfo.parametersCount) {
             exitProgram("Error: Function '" + functionName + "' expects " + functionInfo.parametersCount + " arguments, but got " + arguments.size());
@@ -870,21 +874,11 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
             localVariables.put(parameterName, parameter);
         }
 
-        // Execute the function block
-        for (SimpleScriptParser.StatementContext statement : functionInfo.getBlock()) {
-            visit(statement);
-        }
-
-        // Handle return statement
-        if (functionInfo.returnStatementContext != null) {
-            Object returnValue = visit(functionInfo.returnStatementContext.expr());
-            scopeStack.pop(); // Remove the function scope
-            return returnValue;
-        }
+        var result = visit(functionInfo.getBlock());
 
         scopeStack.pop(); // Remove the function scope
 
-        return null;
+        return result;
     }
 
     @Override
@@ -892,22 +886,19 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
        boolean result = (boolean) visit(ctx.conditionalOperation(0));
 
        if (result) {
-           visit(ctx.block(0));
-           return null;
+           return visit(ctx.block(0));
        } else if (!ctx.ELIF().isEmpty()){
            for (int i = 1; i <= ctx.ELIF().size(); i++) {
                result = (boolean) visit(ctx.conditionalOperation(i));
 
                if (result) {
-                   visit(ctx.block(i));
-                   return null;
+                   return visit(ctx.block(i));
                }
            }
        }
 
         if (Objects.nonNull(ctx.ELSE())) {
-            visit(ctx.block(ctx.conditionalOperation().size()));
-            return null;
+            return visit(ctx.block(ctx.conditionalOperation().size()));
         }
 
         return null;
@@ -1278,27 +1269,6 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
             str = str.substring(1, str.length()-1);
         }
         return str;
-    }
-
-
-    private Object executeFunction(String functionName) {
-        FunctionInfo functionInfo = functions.get(functionName);
-
-        if (functionInfo == null) {
-            System.err.println("Error: Function '" + functionName + "' is not defined.");
-            System.exit(0);
-        }
-
-        for (var statement : functionInfo.block) {
-            visit(statement);
-        }
-
-        if (functionInfo.returnStatementContext != null) {
-            return visit(functionInfo.returnStatementContext);
-        }
-
-        currentInstruction = 0;
-        return null;
     }
 
     private Object sourceVariable(String name) {
