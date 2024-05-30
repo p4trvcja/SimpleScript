@@ -1,0 +1,9 @@
+string napis(int n) {
+    if (n < 30) {
+        return("Lesser");
+    }
+
+    return("Greater");
+};
+
+print(napis(4));
