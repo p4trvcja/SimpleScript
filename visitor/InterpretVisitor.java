@@ -1,5 +1,4 @@
 package visitor;
-import java.text.NumberFormat;
 import java.util.*;
 
 public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
@@ -598,9 +597,6 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
             String varName = (String) result;
             if (currentScope().containsKey(varName)) {
                 result = sourceVariable(varName);
-            } else {
-                // If it's not a variable, treat it as a literal value
-                return result;
             }
         }
 
@@ -680,6 +676,8 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
             }
         } else if (ctx.conditionalOperation() != null) {
             return visit(ctx.conditionalOperation());
+        } else if (ctx.functionInvocation() != null) {
+            return visit(ctx.functionInvocation());
         }
 
         return null;

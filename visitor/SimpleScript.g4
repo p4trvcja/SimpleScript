@@ -103,6 +103,7 @@ logicalFactor: logicalPrimary
              ;
 
 logicalPrimary: value
+              | functionInvocation
               | '(' conditionalOperation ')'
               | NOT logicalPrimary
               ;
