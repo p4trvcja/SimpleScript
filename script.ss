@@ -1,11 +1,11 @@
 
 
 int calculateFactorial(int n){
-    if(n == 0){
+    if(n == 1){
         return(1);
-    }else{
-        return(2);
     }
+    int x = n-1;
+    return(n*calculateFactorial(x));
 };
 
 int number = 5;

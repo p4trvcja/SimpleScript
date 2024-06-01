@@ -1,12 +1,7 @@
-int x = 1 + 20 - (10 * 4)/2 + 1;
-print(x);
+int left = 2;
+int right = 10;
+int m = 7;
 
-int y = x-2+10;
-print(y);
-
-float z = (3.14 + 1.28) * 2.26;
-print(z);
-
-float number = 3 / 2.16;
-print(number);
-
+if((m>left) and (m<right)){
+    print(1);
+}
