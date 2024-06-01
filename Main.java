@@ -11,12 +11,12 @@ import visitor.SimpleScriptParser;
 
 public class Main{
     public static void main(String[] args) throws Exception {
-       if (args.length < 1) {
-           System.err.println("Usage: java SimpleScriptInterpreter <input_file>");
-           System.exit(1);
-       }
+        if (args.length < 1) {
+            System.err.println("Usage: java SimpleScriptInterpreter <input_file>");
+            System.exit(1);
+        }
 
-       String inputFilePath = args[0];
+        String inputFilePath = args[0];
         // String inputFilePath = "script.ss";
         String code = readFile(inputFilePath);
 

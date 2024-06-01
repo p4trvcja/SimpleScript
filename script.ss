@@ -1,12 +1,12 @@
 
 
-int calculateFactorial(int n){
-    if(n == 1){
-        return(1);
+bool checkifExists(int l, int r, int m){
+    if((m>l) and (m<r)){
+        print("hello");
+        return(true);
     }
-    int x = n-1;
-    return(n*calculateFactorial(x));
+
+    return(false);
 };
 
-int number = 5;
-print(calculateFactorial(number));
+print(checkifExists(2, 10, 7));

@@ -790,9 +790,9 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
 
             try {
                 return switch (functionInfo.returnType) {
-                    case "int" -> Integer.valueOf((String) returnValue);
-                    case "float" -> Float.valueOf((String) returnValue);
-                    case "bool" -> Boolean.valueOf((String) returnValue);
+                    case "int" -> returnValue;
+                    case "float" -> returnValue;
+                    case "bool" ->  returnValue;
                     default -> throw new RuntimeException();
                 };
             } catch (Exception e2) {
@@ -843,41 +843,38 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
     @Override
     public Object visitFunctionInvocation(SimpleScriptParser.FunctionInvocationContext ctx) {
         String functionName = ctx.NAME().getText();
-
+    
         if (!functions.containsKey(functionName)) {
             exitProgram("Error: Function '" + functionName + "' is not defined.");
         }
-
+    
         FunctionInfo functionInfo = functions.get(functionName);
         List<SimpleScriptParser.ExprContext> arguments = ctx.expr();
-
-        functionStack.push(functionInfo);
-
+    
         if (arguments.size() != functionInfo.parametersCount) {
             exitProgram("Error: Function '" + functionName + "' expects " + functionInfo.parametersCount + " arguments, but got " + arguments.size());
         }
-
+    
         // Create a new scope for the function call
-
-        scopeStack.push(new HashMap<>(currentScope()));
-
-        Map<String, Variable> localVariables = scopeStack.peek();
-
-
+        Map<String, Variable> localVariables = new HashMap<>();
+    
         // Assign the arguments to the parameters
         List<String> parameterNames = new ArrayList<>(functionInfo.parameters.keySet());
         for (int i = 0; i < arguments.size(); i++) {
             Object value = visit(arguments.get(i));
             String parameterName = parameterNames.get(i);
             Variable parameter = functionInfo.parameters.get(parameterName);
-            parameter.setValue(value);
-            localVariables.put(parameterName, parameter);
+            localVariables.put(parameterName, new Variable(parameter.getType(), value));
         }
-
+    
+        scopeStack.push(localVariables);
+        functionStack.push(functionInfo);
+    
         var result = visit(functionInfo.getBlock());
-
-        scopeStack.pop(); // Remove the function scope
-
+    
+        scopeStack.pop();
+        functionStack.pop();
+    
         return result;
     }
 
