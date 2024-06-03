@@ -841,24 +841,23 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
         return null;
     }
 
-    @Override
     public Object visitFunctionInvocation(SimpleScriptParser.FunctionInvocationContext ctx) {
         String functionName = ctx.NAME().getText();
-    
+
         if (!functions.containsKey(functionName)) {
             exitProgram("Error: Function '" + functionName + "' is not defined.");
         }
-    
+
         FunctionInfo functionInfo = functions.get(functionName);
         List<SimpleScriptParser.ExprContext> arguments = ctx.expr();
-    
+
         if (arguments.size() != functionInfo.parametersCount) {
             exitProgram("Error: Function '" + functionName + "' expects " + functionInfo.parametersCount + " arguments, but got " + arguments.size());
         }
-    
+
         // Create a new scope for the function call
         Map<String, Variable> localVariables = new HashMap<>();
-    
+
         // Assign the arguments to the parameters
         List<String> parameterNames = new ArrayList<>(functionInfo.parameters.keySet());
         for (int i = 0; i < arguments.size(); i++) {
@@ -867,17 +866,35 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
             Variable parameter = functionInfo.parameters.get(parameterName);
             localVariables.put(parameterName, new Variable(parameter.getType(), value));
         }
-    
+
         scopeStack.push(localVariables);
         functionStack.push(functionInfo);
-    
-        var result = visit(functionInfo.getBlock());
-    
+
+        SimpleScriptParser.BlockContext ctx_f = functionInfo.getBlock();
+        Object result = null;
+
+        for (SimpleScriptParser.StatementContext statementContext : ctx_f.statement()) {
+            var value = visit(statementContext);
+            if (value != null){
+                result =  value;
+                scopeStack.pop();
+                scopeStack.pop();
+                functionStack.pop();
+                return result;
+            }
+        }
+
+        if (ctx_f.returnStatement() != null) {
+            result = visit(ctx_f.returnStatement());
+        }
+
         scopeStack.pop();
-//        functionStack.pop();
-    
+        scopeStack.pop();
+        functionStack.pop();
+
         return result;
     }
+
 
     @Override
     public Object visitIfCondition(SimpleScriptParser.IfConditionContext ctx) {

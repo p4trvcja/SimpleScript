@@ -1,6 +1,6 @@
 
 
-bool checkifExists(int l, int r, int m){
+bool checkifExists(int l, int m, int r){
     if((m>l) and (m<r)){
         print("hello");
         return(true);
@@ -9,4 +9,4 @@ bool checkifExists(int l, int r, int m){
     return(false);
 };
 
-print(checkifExists(2, 10, 7));
+print(checkifExists(2, 7, 10));
