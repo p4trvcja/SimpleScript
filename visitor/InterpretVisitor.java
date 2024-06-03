@@ -768,7 +768,7 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
 
     @Override
     public Object visitReturnStatement(SimpleScriptParser.ReturnStatementContext ctx) {
-        FunctionInfo functionInfo = functionStack.pop();
+        FunctionInfo functionInfo = functionStack.peek();
 
         try {
             Object returnValue = visit(ctx.expr());
@@ -777,6 +777,7 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
                         case "int" -> Integer.valueOf((String) returnValue);
                         case "float" -> Float.valueOf((String) returnValue);
                         case "bool" -> Boolean.valueOf((String) returnValue);
+                        case "string" -> returnValue;
                         default -> throw new RuntimeException();
                     };
 
@@ -873,7 +874,7 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
         var result = visit(functionInfo.getBlock());
     
         scopeStack.pop();
-        functionStack.pop();
+//        functionStack.pop();
     
         return result;
     }
