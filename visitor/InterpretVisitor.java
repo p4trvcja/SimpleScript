@@ -685,7 +685,7 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
         if (ctx.NAME() != null) {
             String variableName = ctx.NAME().getText();
             // Check if the variable exists in the current scope
-            if (!currentScope().containsKey(variableName)) {
+            if (currentScope() != null && !currentScope().containsKey(variableName)) {
                 System.err.println("Error: Variable '" + variableName + "' is not defined.");
                 System.exit(1);
             }
@@ -889,7 +889,7 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
         }
 
         scopeStack.pop();
-        scopeStack.pop();
+        //scopeStack.pop();
         functionStack.pop();
 
         return result;
@@ -969,7 +969,13 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
 
         while ((boolean) visit(conditionalOperationContext)) {
             scopeStack.push(new HashMap<>(currentScope()));
-            visit(ctx.block());
+            var value = visit(ctx.block());
+
+            if (value != null) {
+                scopeStack.pop();
+                return value;
+            }
+
             scopeStack.pop();
             if (singleValueOperationContext != null) {
                 visitSingleValueOperation(singleValueOperationContext);
