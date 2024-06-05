@@ -863,6 +863,7 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
         }
 
         // Create a new scope for the function call
+        int theScopeStackNumber = scopeStack.size();
         Map<String, Variable> localVariables = new HashMap<>();
 
         // Assign the arguments to the parameters
@@ -887,6 +888,9 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
                 scopeStack.pop();
                 scopeStack.pop();
                 functionStack.pop();
+                while(scopeStack.size() != theScopeStackNumber){
+                    scopeStack.pop();
+                }
                 return result;
             }
         }
@@ -899,6 +903,9 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
         //scopeStack.pop();
         functionStack.pop();
 
+        while(scopeStack.size() != theScopeStackNumber){
+            scopeStack.pop();
+        }
         return result;
     }
 
