@@ -17,7 +17,7 @@ public class Main{
 //        }
 //
 //        String inputFilePath = args[0];
-        String inputFilePath = "script.ss";
+        String inputFilePath = "function_assign.ss";
         String code = readFile(inputFilePath);
 
         CodePointCharStream input = CharStreams.fromString(code);
