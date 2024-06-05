@@ -675,6 +675,8 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
             return visit(ctx.conditionalOperation());
         } else if (ctx.functionInvocation() != null) {
             return visit(ctx.functionInvocation());
+        } else if (ctx.arithmeticOperation() != null) {
+            return visit(ctx.arithmeticOperation());
         }
 
         return null;
@@ -833,6 +835,11 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
             System.exit(1);
         }
 
+        if (block.returnStatement() == null && !returnType.equals("void")) {
+            System.err.println("Error: Non-void function should return a value.");
+            System.exit(1);
+        }
+
         FunctionInfo functionInfo = new FunctionInfo(returnType, block, parameters.size());
         functionInfo.parameters = parameters;
 
@@ -959,6 +966,7 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
         SimpleScriptParser.ConditionalOperationContext conditionalOperationContext = ctx.conditionalOperation();
         SimpleScriptParser.SingleValueOperationContext singleValueOperationContext = ctx.singleValueOperation();
         SimpleScriptParser.VariableAssignmentContext variableAssignmentContext;
+
         if(isList) {
             variableAssignmentContext = ctx.variableAssignment(1);
         } else {

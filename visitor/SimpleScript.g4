@@ -134,7 +134,7 @@ addOperation: ADD LPAREN NAME COMMA expr RPAREN;
 block : LBRACE statement* returnStatement? RBRACE;
 
 // loops
-iterationStatement: whileLoop 
+iterationStatement: whileLoop
                     | forLoop 
                     | forLoopArray 
                     ; 
