@@ -105,6 +105,7 @@ logicalFactor: logicalPrimary
 logicalPrimary: value
               | functionInvocation
               | '(' conditionalOperation ')'
+              | '(' arithmeticOperation ')'     
               | NOT logicalPrimary
               ;
 
