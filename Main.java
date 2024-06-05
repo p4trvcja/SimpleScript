@@ -17,7 +17,7 @@ public class Main{
 //        }
 //
 //        String inputFilePath = args[0];
-        String inputFilePath = "function_assign.ss";
+        String inputFilePath = "script_fun_ret_mismatch.ss";
         String code = readFile(inputFilePath);
 
         CodePointCharStream input = CharStreams.fromString(code);

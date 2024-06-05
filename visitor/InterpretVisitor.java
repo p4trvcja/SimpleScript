@@ -98,16 +98,21 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
             String name = ctx.NAME(i).getText();
             Object value = visit(ctx.expr(i));
 
-            if (value instanceof String) {
-                // Check if the string is a variable name
-                String strValue = (String) value;
-                if (currentScope.containsKey(strValue) || isVariableName(strValue)) {
-                    value = sourceVariable(strValue);
-                }
-            }
+//            if (value instanceof String) {
+//                // Check if the string is a variable name
+//                String strValue = (String) value;
+//                if (currentScope.containsKey(strValue) || isVariableName(strValue)) {
+//                    value = sourceVariable(strValue);
+//                }
+//            }
 
-            if (type.equals("int") && value instanceof Float) {
-                value = ((Float) value).intValue();
+//            if (type.equals("int") && value instanceof Float) {
+//                value = ((Float) value).intValue();
+//            }
+
+            if (!Objects.equals(type, checkType(value))) {
+                System.err.println("Type error: Variable '" + name + "' can't be assigned type: " + checkType(value));
+                System.exit(1);
             }
 
             if (currentScope.containsKey(name)) {
@@ -119,6 +124,27 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
             currentScope.put(name, variable);
         }
 
+        return null;
+    }
+
+    private String checkType (Object value) {
+        if(value instanceof Integer){
+            return "int";
+        }else if(value instanceof Float){
+            return "float";
+        }else if(value instanceof Boolean){
+            return "bool";
+        }
+
+        if(parseValue((String)value) instanceof Integer){
+            return "int";
+        }else if(parseValue((String)value) instanceof String){
+            return "string";
+        }else if(parseValue((String)value) instanceof Float){
+            return "float";
+        }else if(parseValue((String)value) instanceof Boolean){
+            return "bool";
+        }
         return null;
     }
 
@@ -150,14 +176,19 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
         String name = ctx.NAME().getText();
         Object value = visit(ctx.expr());
 
-        if (value instanceof String) {
-            String strValue = (String) value;
-            if (isVariableName(strValue)) {
-                value = sourceVariable(strValue);
-            }
-        }
+//        if (value instanceof String) {
+//            String strValue = (String) value;
+//            if (isVariableName(strValue)) {
+//                value = sourceVariable(strValue);
+//            }
+//        }
 
         Map<String, Variable> currentScope = scopeStack.peek();
+
+        if (!Objects.equals(currentScope.get(name).type, checkType(value))) {
+            System.err.println("Type error: Variable '" + name + "' can't be assigned type: " + checkType(value));
+            System.exit(1);
+        }
 
         if (ctx.ASSIGN() != null) {
             if (currentScope.containsKey(name)) {
@@ -775,6 +806,11 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
         try {
             Object returnValue = visit(ctx.expr());
 
+            if (!Objects.equals(functionInfo.returnType, checkType(returnValue))) {
+                System.err.println("Type error: Function of return type '" + functionInfo.returnType + "' can't return: " + returnValue);
+                System.exit(1);
+            }
+
             return switch (functionInfo.returnType) {
                         case "int" -> Integer.valueOf((String) returnValue);
                         case "float" -> Float.valueOf((String) returnValue);
@@ -1333,6 +1369,6 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
         // System.err.println("Cannot cast" + value + "to a specific type.");
         // System.exit(1);
         // return null;
-        throw new NullPointerException();
+        return value;
     }
 }
