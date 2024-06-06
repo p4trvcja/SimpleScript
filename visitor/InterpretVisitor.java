@@ -393,11 +393,17 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
     }
 
     private Object multiply(Object a, Object b) {
-        // Perform multiplication
+        try {
+            if (a != null)
+                a = convertToNumber(a);
+            b = convertToNumber(b);
+        } catch (NumberFormatException e) {
+            System.err.println("Error: Operands are not valid numbers");
+            System.exit(1);
+        }
         if (a instanceof Integer && b instanceof Integer) {
             return (int) a * (int) b;
         } else if (a instanceof Float || b instanceof Float) {
-            // Cast to float if any operand is float to preserve precision
             return ((Number) a).floatValue() * ((Number) b).floatValue();
         } else {
             System.err.println("Error: Incorrect arguments for multiplication");
@@ -406,6 +412,14 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
     }
 
     private Object divide(Object a, Object b) {
+        try {
+            if (a != null)
+                a = convertToNumber(a);
+            b = convertToNumber(b);
+        } catch (NumberFormatException e) {
+            System.err.println("Error: Operands are not valid numbers");
+            System.exit(1);
+        }
         // Perform division
         if (a instanceof Integer && b instanceof Integer) {
             if ((int) a == 0) {
