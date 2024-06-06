@@ -1,6 +1,8 @@
 package visitor;
 import java.util.*;
 
+import javax.swing.text.html.HTMLEditorKit.Parser;
+
 import org.antlr.v4.runtime.ParserRuleContext;
 
 public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
@@ -487,6 +489,23 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
             if (left != null)
                 left = convertToNumber(left);
             right = convertToNumber(right);
+            if(left != null && right != null){
+                if (!Objects.equals(checkType(left), checkType(right))) {
+                    try{
+                        ParserRuleContext context =  findParent(ctx);
+                        int errorIndex = ctx.CONCAT().getSymbol().getCharPositionInLine();
+                        printError(context, "Type error: Operands are of different types: " + checkType(left) + ", " + checkType(right), errorIndex);
+                        System.exit(1);
+                    }catch(Exception e){
+                        ParserRuleContext context =  findParent(ctx);
+                        int errorIndex = ctx.SUB().getSymbol().getCharPositionInLine();
+                        printError(context, "Type error: Operands are of different types: " + checkType(left) + ", " + checkType(right), errorIndex);
+                        System.exit(1); 
+                    }
+                    
+                }
+            }
+
         } catch (NumberFormatException e) {
             System.err.println("Error: Operands are not valid numbers");
             System.exit(1);
@@ -765,13 +784,23 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
         return null;
     }
 
+    private ParserRuleContext findParent(ParserRuleContext ctx){
+        ParserRuleContext statementCtx = ctx;
+        while(!(statementCtx instanceof SimpleScriptParser.StatementContext)){
+            statementCtx = statementCtx.getParent();
+        }
+        return statementCtx;
+    }
+
     @Override
     public Object visitValue(SimpleScriptParser.ValueContext ctx) {
         if (ctx.NAME() != null) {
             String variableName = ctx.NAME().getText();
             // Check if the variable exists in the current scope
             if (currentScope() != null && !currentScope().containsKey(variableName)) {
-                System.err.println("Error: Variable '" + variableName + "' is not defined.");
+                int errorIndex = ctx.NAME().getSymbol().getCharPositionInLine();
+                ParserRuleContext statementCtx = findParent(ctx);
+                printError(statementCtx, "Error: Variable '" + variableName + "' is not defined.", errorIndex);
                 System.exit(1);
             }
             Object value = sourceVariable(variableName);

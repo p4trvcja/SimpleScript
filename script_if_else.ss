@@ -1,4 +1,6 @@
+int fun(int a){
+    return(a+2);
+};
 
-
-
-print(2/-20);
+int hej = 10;
+print(2/-(fun(hej-3-"awdawd")+30));
