@@ -76,9 +76,9 @@ expr: value
       ; 
 
 // basic operations
-arithmeticOperation: term
-    | arithmeticOperation CONCAT term
+arithmeticOperation: arithmeticOperation CONCAT term
     | arithmeticOperation SUB term
+    | term
     ;
 
 term: factor
@@ -89,7 +89,9 @@ term: factor
 factor: value
       | functionInvocation
       | '(' expr ')'
+      | '-' factor
       ;
+
 
 conditionalOperation: logicalTerm
             | conditionalOperation CONDITION_OP logicalTerm;
@@ -265,4 +267,4 @@ WS: [ \t\r\n]+ -> skip;
 
 NAME : [a-zA-Z]+[a-zA-Z0-9_]* ;  
 
-NUMBER : ('-')?[0-9]+('.'[0-9]+)?; 
+NUMBER : [0-9]+ ('.' [0-9]+)?;

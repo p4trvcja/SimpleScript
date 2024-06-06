@@ -5,6 +5,8 @@ import org.antlr.v4.runtime.CharStreams;
 import org.antlr.v4.runtime.CodePointCharStream;
 import org.antlr.v4.runtime.CommonTokenStream;
 import org.antlr.v4.runtime.tree.ParseTree;
+
+import visitor.CustomErrorListener;
 import visitor.InterpretVisitor;
 import visitor.SimpleScriptLexer;
 import visitor.SimpleScriptParser;
@@ -17,13 +19,22 @@ public class Main{
 //        }
 //
 //        String inputFilePath = args[0];
-        String inputFilePath = "script_fun_ret_mismatch.ss";
+        String inputFilePath = "script_if_else.ss";
         String code = readFile(inputFilePath);
 
         CodePointCharStream input = CharStreams.fromString(code);
         SimpleScriptLexer lexer = new SimpleScriptLexer(input);
         CommonTokenStream tokens = new CommonTokenStream(lexer);
         SimpleScriptParser parser = new SimpleScriptParser(tokens);
+
+        lexer.removeErrorListeners();
+        parser.removeErrorListeners();
+
+        CustomErrorListener errorListener = new CustomErrorListener();
+        lexer.addErrorListener(errorListener);
+        parser.addErrorListener(errorListener);
+
+
         ParseTree tree = parser.script();
 
         InterpretVisitor interpreter = new InterpretVisitor();

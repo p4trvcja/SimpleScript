@@ -1,6 +1,8 @@
 package visitor;
 import java.util.*;
 
+import org.antlr.v4.runtime.ParserRuleContext;
+
 public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
     private int currentInstruction = 0;
     private final Map<String, FunctionInfo> functions = new HashMap<>();
@@ -89,6 +91,20 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
         return scopeStack.peek();
     }
 
+    private void printError(ParserRuleContext ctx, String message, int errorIndex) {
+        int line = ctx.getStart().getLine();
+        int charPositionInLine = ctx.getStart().getCharPositionInLine();
+        String errorLine = ctx.getStart().getInputStream().getText(new org.antlr.v4.runtime.misc.Interval(
+                ctx.getStart().getStartIndex(),
+                ctx.getStop().getStopIndex()
+        ));
+
+        System.err.println("error: line " + line + ":" + (charPositionInLine+errorIndex) + " " + message);
+        System.err.println(errorLine);
+        for (int i = 0; i < charPositionInLine + errorIndex; i++) System.err.print(" ");
+        System.err.println("^");
+    }
+
     @Override
     public Void visitVariableDefinition(SimpleScriptParser.VariableDefinitionContext ctx) {
         String type = ctx.TYPE().getText();
@@ -111,12 +127,14 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
 //            }
 
             if (!Objects.equals(type, checkType(value))) {
-                System.err.println("Type error: Variable '" + name + "' can't be assigned type: " + checkType(value));
+                int errorIndex = ctx.expr(i).getStart().getCharPositionInLine();
+                printError(ctx, "Type error: Variable '" + name + "' can't be assigned type: " + checkType(value), errorIndex);
                 System.exit(1);
             }
 
             if (currentScope.containsKey(name)) {
-                System.err.println("Duplicate Error: Variable '" + name + "' has been declared");
+                int errorIndex = ctx.NAME(i).getSymbol().getCharPositionInLine();
+                printError(ctx, "Duplicate Error: Variable '" + name + "' has been declared", errorIndex);
                 System.exit(1);
             }
 
@@ -185,22 +203,38 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
 
         Map<String, Variable> currentScope = scopeStack.peek();
 
-        if (!Objects.equals(currentScope.get(name).type, checkType(value))) {
-            System.err.println("Type error: Variable '" + name + "' can't be assigned type: " + checkType(value));
-            System.exit(1);
-        }
+        // if (currentScope.containsKey(name)) {
+        //     int errorIndex = ctx.NAME(i).getSymbol().getCharPositionInLine();
+        //     printError(ctx, "Duplicate Error: Variable '" + name + "' has been declared", errorIndex);
+        //     System.exit(1);
+        // }
+
+
 
         if (ctx.ASSIGN() != null) {
             if (currentScope.containsKey(name)) {
+                if (!Objects.equals(currentScope.get(name).type, checkType(value))) {
+                    int errorIndex = ctx.ASSIGN().getSymbol().getCharPositionInLine();
+                    printError(ctx, "Type error: Variable '" + name + "' can't be assigned type: " + checkType(value), errorIndex);
+                    System.exit(1);
+                }
                 Variable variable = currentScope.get(name);
                 variable.setValue(value);
             } else {
-                System.err.println("Error: Variable '" + name + "' has not been declared");
+                int errorIndex = ctx.ASSIGN().getSymbol().getCharPositionInLine();
+                printError(ctx, "Error: Variable '" + name + "' has not been declared", errorIndex);
                 System.exit(1);
             }
         }
 
+
+
         if (ctx.ASSIGNMENT() != null) {
+            if(currentScope.get(name).value == null){
+                int errorIndex = ctx.ASSIGNMENT().getSymbol().getCharPositionInLine();
+                printError(ctx, "Error: Variable '" + name + "' might not have been initialized", errorIndex);
+                System.exit(1);
+            }
             Object baseVariable = sourceVariable(name);
 
             if (baseVariable instanceof String)
@@ -306,15 +340,15 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
         Object result = visit(ctx.factor());
 
         // Check if the result is a numeric literal
-        if (result instanceof String) {
-            String strResult = (String) result;
-            if (isNumeric(strResult)) {
-                result = parseValue(strResult); // Return the parsed numeric value
-            } else {
-                // Otherwise, treat it as a variable name
-                result = sourceVariable(strResult);
-            }
-        }
+        // if (result instanceof String) {
+        //     String strResult = (String) result;
+        //     if (isNumeric(strResult)) {
+        //         result = parseValue(strResult); // Return the parsed numeric value
+        //     } else {
+        //         // Otherwise, treat it as a variable name
+        //         result = sourceVariable(strResult);
+        //     }
+        // }
 
         if (ctx.term() != null) {
             Object nextFactorResult = visit(ctx.term());
@@ -340,7 +374,11 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
 
     @Override
     public Object visitFactor(SimpleScriptParser.FactorContext ctx) {
-        if (ctx.value() != null) {
+        if (ctx.factor() != null){
+            Object n = visit(ctx.factor());
+            return "-" + n;
+        }
+        else if (ctx.value() != null) {
             return visit(ctx.value());
         } else if (ctx.expr() != null) {
             return visit(ctx.expr());
@@ -398,36 +436,36 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
         }
 
         // Convert right operand to a literal value if it's a variable
-        if (right instanceof String) {
-            String rightVarName = (String) right;
-            if (currentScope().containsKey(rightVarName)) {
-                right = sourceVariable(rightVarName);
-            } else {
-                // If it's not a variable, treat it as a literal value
-                try {
-                    right = parseValue(rightVarName);
-                } catch (NumberFormatException e) {
-                    System.err.println("Error: Invalid value for right operand");
-                    System.exit(1);
-                }
-            }
-        }
+        // if (right instanceof String) {
+        //     String rightVarName = (String) right;
+        //     if (currentScope().containsKey(rightVarName)) {
+        //         right = sourceVariable(rightVarName);
+        //     } else {
+        //         // If it's not a variable, treat it as a literal value
+        //         try {
+        //             right = parseValue(rightVarName);
+        //         } catch (NumberFormatException e) {
+        //             System.err.println("Error: Invalid value for right operand");
+        //             System.exit(1);
+        //         }
+        //     }
+        // }
 
         // Convert left operand to a literal value if it's a variable
-        if (left instanceof String) {
-            String leftVarName = (String) left;
-            if (currentScope().containsKey(leftVarName)) {
-                left = sourceVariable(leftVarName);
-            } else {
-                // If it's not a variable, treat it as a literal value
-                try {
-                    left = parseValue(leftVarName);
-                } catch (NumberFormatException e) {
-                    System.err.println("Error: Invalid value for left operand");
-                    System.exit(1);
-                }
-            }
-        }
+        // if (left instanceof String) {
+        //     String leftVarName = (String) left;
+        //     if (currentScope().containsKey(leftVarName)) {
+        //         left = sourceVariable(leftVarName);
+        //     } else {
+        //         // If it's not a variable, treat it as a literal value
+        //         try {
+        //             left = parseValue(leftVarName);
+        //         } catch (NumberFormatException e) {
+        //             System.err.println("Error: Invalid value for left operand");
+        //             System.exit(1);
+        //         }
+        //     }
+        // }
 
         // Now, both left and right operands should be literal values
         // Perform type conversion if necessary
@@ -722,7 +760,14 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
                 System.err.println("Error: Variable '" + variableName + "' is not defined.");
                 System.exit(1);
             }
-            return sourceVariable(variableName); // Return variable name
+            Object value = sourceVariable(variableName);
+            if(value == null){
+                int errorIndex = ctx.NAME().getSymbol().getCharPositionInLine();
+                printError(ctx.getParent().getParent().getParent().getParent(), "Error: Variable '" + ctx.NAME() + "' might not have been initialized", errorIndex);
+                System.exit(1);
+            }
+            
+            return value; // Return variable name
         } else if (ctx.STRING() != null) {
             String text = ctx.STRING().getText();
             return text.substring(1, text.length() - 1); // Return string value without quotes
@@ -742,6 +787,11 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
     
         // Get the current value of the variable
         Object value = sourceVariable(variableName);
+
+        if(value == null){
+            System.err.println("Error: Variable '" + variableName + "' might not have been initialized");
+            System.exit(1);
+        }
 
         if (value instanceof String){
             value = parseValue((String) value);

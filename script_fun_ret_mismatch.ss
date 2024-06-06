@@ -1,8 +1,12 @@
-int mismatch(int n) {
-    if (n < 18) {
-        return("hello");
-    }
-    return(true);
+int c = 5;
+
+int fun(int g){
+    int c;
+    c+=1;
+    return(c);
 };
 
-print(mismatch(3));
+print(fun(c));
+print(c);
+
+
