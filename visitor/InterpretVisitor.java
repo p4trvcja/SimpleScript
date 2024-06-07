@@ -1,5 +1,6 @@
 package visitor;
 import java.util.*;
+import java.util.stream.Collectors;
 
 import javax.swing.text.html.HTMLEditorKit.Parser;
 
@@ -7,6 +8,7 @@ import org.antlr.v4.runtime.ParserRuleContext;
 
 public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
     private int currentInstruction = 0;
+    private Map<String, Map<List<Object>, Object>> memoizedResults = new HashMap<>();
     private final Map<String, FunctionInfo> functions = new HashMap<>();
     //private final Map<Integer, Map<String, Variable>> variables = new HashMap<>();
     private final Deque<Map<String, Variable>> scopeStack = new ArrayDeque<>();
@@ -205,6 +207,11 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
 
         for (int i = 0; i < ctx.NAME().size(); i++) {
             String name = ctx.NAME(i).getText();
+            if (currentScope.containsKey(name)) {
+                int errorIndex = ctx.NAME(i).getSymbol().getCharPositionInLine();
+                printError(ctx, "Duplicate Error: Variable '" + name + "' has been declared", errorIndex);
+                System.exit(1);
+            }
             Variable variable = new Variable(type, null);
             currentScope.put(name, variable);
         }
@@ -327,11 +334,9 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
 
         Map<String, Variable> localVariables = currentScope();
 
-        if (value instanceof String && localVariables.containsKey(value)) {
-            System.out.println(localVariables.get(value).value);
-        } else {
-            System.out.println(value);
-        }
+
+        System.out.println(value);
+
         return null;
     }
 
@@ -918,6 +923,10 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
         FunctionInfo functionInfo = functionStack.peek();
 
         try {
+            if(ctx.expr() == null && Objects.equals(functionInfo.returnType, "void")){
+                return new Exception();
+            }
+
             Object returnValue = visit(ctx.expr());
 
             if (!Objects.equals(functionInfo.returnType, checkType(returnValue))) {
@@ -998,6 +1007,8 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
         return null;
     }
 
+
+
     public Object visitFunctionInvocation(SimpleScriptParser.FunctionInvocationContext ctx) {
         String functionName = ctx.NAME().getText();
 
@@ -1006,8 +1017,8 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
         }
 
         FunctionInfo functionInfo = functions.get(functionName);
-        if(Objects.equals(functionInfo.returnType, "void") && !(ctx.getParent() instanceof SimpleScriptParser.StatementContext)){
-            ParserRuleContext context =  findParent(ctx);
+        if (Objects.equals(functionInfo.returnType, "void") && !(ctx.getParent() instanceof SimpleScriptParser.StatementContext)) {
+            ParserRuleContext context = findParent(ctx);
             int errorIndex = ctx.NAME().getSymbol().getCharPositionInLine();
             printError(context, "Type error: 'void' type not expected here", errorIndex);
             System.exit(1);
@@ -1018,17 +1029,22 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
             exitProgram("Error: Function '" + functionName + "' expects " + functionInfo.parametersCount + " arguments, but got " + arguments.size());
         }
 
+        // Create a key for memoization based on the function name and arguments
+        List<Object> argumentValues = arguments.stream().map(this::visit).collect(Collectors.toList());
+        if (memoizedResults.containsKey(functionName) && memoizedResults.get(functionName).containsKey(argumentValues)) {
+            return memoizedResults.get(functionName).get(argumentValues);
+        }
+
         // Create a new scope for the function call
-        int theScopeStackNumber = scopeStack.size();
+        int originalScopeSize = scopeStack.size();
         Map<String, Variable> localVariables = new HashMap<>();
 
         // Assign the arguments to the parameters
         List<String> parameterNames = new ArrayList<>(functionInfo.parameters.keySet());
         for (int i = 0; i < arguments.size(); i++) {
-            Object value = visit(arguments.get(i));
             String parameterName = parameterNames.get(i);
             Variable parameter = functionInfo.parameters.get(parameterName);
-            localVariables.put(parameterName, new Variable(parameter.getType(), value));
+            localVariables.put(parameterName, new Variable(parameter.getType(), argumentValues.get(i)));
         }
 
         scopeStack.push(localVariables);
@@ -1040,32 +1056,33 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
         for (SimpleScriptParser.StatementContext statementContext : ctx_f.statement()) {
             var value = visit(statementContext);
             if (value != null){
-                result =  value;
-                scopeStack.pop();
-                scopeStack.pop();
-                functionStack.pop();
-                while(scopeStack.size() != theScopeStackNumber){
-                    scopeStack.pop();
-                }
-                return result;
+                result = value;
+                break;
+            }
+            if(value instanceof Exception){
+                return null;
             }
         }
 
-
-        if (ctx_f.returnStatement() != null) {
+        if(result == null && Objects.equals(functionInfo.returnType, "void")){
+            return null;
+        }
+        else if (result == null && ctx_f.returnStatement() != null) {
             result = visit(ctx_f.returnStatement());
-        }else if(!Objects.equals(functionInfo.returnType, "void")){
+        } else if (result == null && !Objects.equals(functionInfo.returnType, "void")) {
             System.err.println("Error: function: '" + functionName + "' should return a value");
             System.exit(1);
         }
 
-        scopeStack.pop();
-        //scopeStack.pop();
-        functionStack.pop();
-
-        while(scopeStack.size() != theScopeStackNumber){
+        // Reset the scope stack to its original size efficiently
+        while (scopeStack.size() > originalScopeSize) {
             scopeStack.pop();
         }
+        functionStack.pop();
+
+        // Store the result in the memoization cache
+        memoizedResults.computeIfAbsent(functionName, k -> new HashMap<>()).put(argumentValues, result);
+
         return result;
     }
 

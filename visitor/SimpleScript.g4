@@ -29,7 +29,7 @@ variableAssignment : NAME (ASSIGNMENT | ASSIGN)  expr;
 
 
 // functions
-returnStatement : RETURN LPAREN expr RPAREN SEMICOLON;
+returnStatement : RETURN LPAREN expr? RPAREN SEMICOLON;
 
 functionDeclaration : (TYPE | arrayType) NAME LPAREN ((TYPE | arrayType) NAME ((COMMA (TYPE | arrayType) NAME)*))? RPAREN block SEMICOLON;
 
