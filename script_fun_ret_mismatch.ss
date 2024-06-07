@@ -1,12 +1,3 @@
-int c = 5;
-
-int fun(int g){
-    int c;
-    c+=1;
-    return(c);
+void fun(nwdkjad){
+    return(2);
 };
-
-print(fun(c));
-print(c);
-
-

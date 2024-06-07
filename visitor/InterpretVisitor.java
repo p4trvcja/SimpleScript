@@ -101,11 +101,32 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
                 ctx.getStop().getStopIndex()
         ));
 
-        System.err.println("error: line " + line + ":" + (charPositionInLine+errorIndex) + " " + message);
+        // Calculate the position of the caret considering tab expansion up to the error index
+//        int expandedPosition = 0;
+//        for (int i = 0; i < charPositionInLine; i++) {
+//            if (errorLine.charAt(i) == '\t') {
+//                expandedPosition += 4; // assuming a tab width of 4 spaces
+//            } else {
+//                expandedPosition++;
+//            }
+//        }
+
+        // Adjust the position for the error index
+//        for (int i = charPositionInLine; i < charPositionInLine + errorIndex; i++) {
+//            if (i < errorLine.length() && errorLine.charAt(i) == '\t') {
+//                expandedPosition += 4; // assuming a tab width of 4 spaces
+//            } else {
+//                expandedPosition++;
+//            }
+//        }
+
+        System.err.println("error: line " + line + ":" + (charPositionInLine + errorIndex) + " " + message);
+        for (int i = 0; i < charPositionInLine; i++) System.err.print(" ");
         System.err.println(errorLine);
-        for (int i = 0; i < charPositionInLine + errorIndex; i++) System.err.print(" ");
+        for (int i = 0; i < errorIndex; i++) System.err.print(" ");
         System.err.println("^");
     }
+
 
     @Override
     public Void visitVariableDefinition(SimpleScriptParser.VariableDefinitionContext ctx) {
@@ -964,10 +985,10 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
             System.exit(1);
         }
 
-        if (block.returnStatement() == null && !returnType.equals("void")) {
-            System.err.println("Error: Non-void function should return a value.");
-            System.exit(1);
-        }
+//        if (block.returnStatement() == null && !returnType.equals("void")) {
+//            System.err.println("Error: Non-void function should return a value.");
+//            System.exit(1);
+//        }
 
         FunctionInfo functionInfo = new FunctionInfo(returnType, block, parameters.size());
         functionInfo.parameters = parameters;
@@ -985,6 +1006,12 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
         }
 
         FunctionInfo functionInfo = functions.get(functionName);
+        if(Objects.equals(functionInfo.returnType, "void") && !(ctx.getParent() instanceof SimpleScriptParser.StatementContext)){
+            ParserRuleContext context =  findParent(ctx);
+            int errorIndex = ctx.NAME().getSymbol().getCharPositionInLine();
+            printError(context, "Type error: 'void' type not expected here", errorIndex);
+            System.exit(1);
+        }
         List<SimpleScriptParser.ExprContext> arguments = ctx.expr();
 
         if (arguments.size() != functionInfo.parametersCount) {
@@ -1024,8 +1051,12 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
             }
         }
 
+
         if (ctx_f.returnStatement() != null) {
             result = visit(ctx_f.returnStatement());
+        }else if(!Objects.equals(functionInfo.returnType, "void")){
+            System.err.println("Error: function: '" + functionName + "' should return a value");
+            System.exit(1);
         }
 
         scopeStack.pop();
