@@ -22,12 +22,16 @@ public class CustomErrorListener extends BaseErrorListener {
                 charPositionInLine = errorLine.length();
             }
         }
+        if(charPositionInLine-1<0){
+            line -= 1;
+            errorLine = getErrorLine(charStream, line);
+            charPositionInLine = errorLine.length();
+        }
 
         // Construct the customized error message
         String customizedMsg = "error: line " + line + ":" + (charPositionInLine - 1) + " " + msg + "\n";
         customizedMsg += errorLine + "\n";
         customizedMsg += " ".repeat(charPositionInLine - 1) + "^";
-
         // Print the customized error message
         System.err.println(customizedMsg);
         System.exit(1);

@@ -1,3 +1,1 @@
-void fun(nwdkjad){
-    return(2);
-};
+int x
