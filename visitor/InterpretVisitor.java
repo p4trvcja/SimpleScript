@@ -855,7 +855,9 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
 
     @Override
     public Object visitLogicalPrimary(SimpleScriptParser.LogicalPrimaryContext ctx) {
+
         if (ctx.value() != null) {
+
             Object result = visit(ctx.value());
 
             // Check if the result is a variable name
@@ -876,7 +878,7 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
             try {
                 boolean boolResult = result instanceof String ? (boolean) parseValue((String) result) : (boolean) result;
                 return !boolResult;
-            } catch (NumberFormatException e) {
+            } catch (ClassCastException e) {
                 System.err.println("Error: Invalid boolean value");
                 System.exit(1);
             }
@@ -1057,6 +1059,10 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
         String returnType = ctx.TYPE(0).getText();
         String functionName = ctx.NAME(0).getText();
 
+        if (ctx.block() == null) {
+            exitProgram("Error: Incomplete function definition.");
+        }
+
         if (ctx.block().returnStatement() != null && returnType.equals("void")) {
             exitProgram("Error: Void functions cannot contain a return statement.");
         }
@@ -1069,11 +1075,6 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
         }
 
         SimpleScriptParser.BlockContext block = ctx.block();
-
-        if (block.statement().isEmpty() && returnType.equals("void")) {
-            System.err.println("Error: Block context not found.");
-            System.exit(1);
-        }
 
 //        if (block.returnStatement() == null && !returnType.equals("void")) {
 //            System.err.println("Error: Non-void function should return a value.");
