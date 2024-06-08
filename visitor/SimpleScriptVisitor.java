@@ -1,4 +1,4 @@
-// Generated from SimpleScript.g4 by ANTLR 4.13.1
+// Generated from visitor/SimpleScript.g4 by ANTLR 4.13.1
 package visitor;
 import org.antlr.v4.runtime.tree.ParseTreeVisitor;
 
@@ -118,6 +118,12 @@ public interface SimpleScriptVisitor<T> extends ParseTreeVisitor<T> {
 	 * @return the visitor result
 	 */
 	T visitExpr(SimpleScriptParser.ExprContext ctx);
+	/**
+	 * Visit a parse tree produced by {@link SimpleScriptParser#conditionalArithmeticOperation}.
+	 * @param ctx the parse tree
+	 * @return the visitor result
+	 */
+	T visitConditionalArithmeticOperation(SimpleScriptParser.ConditionalArithmeticOperationContext ctx);
 	/**
 	 * Visit a parse tree produced by {@link SimpleScriptParser#arithmeticOperation}.
 	 * @param ctx the parse tree

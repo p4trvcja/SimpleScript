@@ -1,4 +1,4 @@
-// Generated from SimpleScript.g4 by ANTLR 4.13.1
+// Generated from visitor/SimpleScript.g4 by ANTLR 4.13.1
 package visitor;
 
 import org.antlr.v4.runtime.ParserRuleContext;
@@ -228,6 +228,18 @@ public class SimpleScriptBaseListener implements SimpleScriptListener {
 	 * <p>The default implementation does nothing.</p>
 	 */
 	@Override public void exitExpr(SimpleScriptParser.ExprContext ctx) { }
+	/**
+	 * {@inheritDoc}
+	 *
+	 * <p>The default implementation does nothing.</p>
+	 */
+	@Override public void enterConditionalArithmeticOperation(SimpleScriptParser.ConditionalArithmeticOperationContext ctx) { }
+	/**
+	 * {@inheritDoc}
+	 *
+	 * <p>The default implementation does nothing.</p>
+	 */
+	@Override public void exitConditionalArithmeticOperation(SimpleScriptParser.ConditionalArithmeticOperationContext ctx) { }
 	/**
 	 * {@inheritDoc}
 	 *

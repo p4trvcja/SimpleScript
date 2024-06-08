@@ -75,6 +75,9 @@ expr: value
       | arrayOperation
       ; 
 
+conditionalArithmeticOperation: conditionalArithmeticOperation CONDITION_OP arithmeticOperation
+                                | arithmeticOperation;
+
 // basic operations
 arithmeticOperation: arithmeticOperation CONCAT term
     | arithmeticOperation SUB term
@@ -93,8 +96,7 @@ factor: value
       ;
 
 
-conditionalOperation: logicalTerm
-            | conditionalOperation CONDITION_OP logicalTerm;
+conditionalOperation: logicalTerm;
 
 logicalTerm: logicalFactor
             | logicalTerm OR logicalFactor
@@ -107,7 +109,7 @@ logicalFactor: logicalPrimary
 logicalPrimary: value
               | functionInvocation
               | '(' conditionalOperation ')'
-              | '(' arithmeticOperation ')'     
+              | conditionalArithmeticOperation 
               | NOT logicalPrimary
               ;
 

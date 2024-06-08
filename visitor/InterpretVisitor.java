@@ -467,6 +467,98 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
         }
     }
 
+    @Override
+    public Object visitConditionalArithmeticOperation(SimpleScriptParser.ConditionalArithmeticOperationContext ctx) {
+        Object right = visit(ctx.arithmeticOperation());
+        Object left = null;
+        String op = null;
+
+        if (ctx.getChildCount() > 1) {
+            op = ctx.getChild(1).getText();
+            left = visit(ctx.conditionalArithmeticOperation());
+        }
+
+        // Convert right operand to a literal value if it's a variable
+        // if (right instanceof String) {
+        //     String rightVarName = (String) right;
+        //     if (currentScope().containsKey(rightVarName)) {
+        //         right = sourceVariable(rightVarName);
+        //     } else {
+        //         // If it's not a variable, treat it as a literal value
+        //         try {
+        //             right = parseValue(rightVarName);
+        //         } catch (NumberFormatException e) {
+        //             System.err.println("Error: Invalid value for right operand");
+        //             System.exit(1);
+        //         }
+        //     }
+        // }
+
+        // // Convert left operand to a literal value if it's a variable
+        // if (left instanceof String) {
+        //     String leftVarName = (String) left;
+        //     if (currentScope().containsKey(leftVarName)) {
+        //         left = sourceVariable(leftVarName);
+        //     } else {
+        //         // If it's not a variable, treat it as a literal value
+        //         try {
+        //             left = parseValue(leftVarName);
+        //         } catch (NumberFormatException e) {
+        //             System.err.println("Error: Invalid value for left operand");
+        //             System.exit(1);
+        //         }
+        //     }
+        // }
+
+        // Now, both left and right operands should be literal values
+        // Perform type conversion if necessary
+        try {
+            if (left != null)
+                left = convertToNumber(left);
+            right = convertToNumber(right);
+            if(left != null && right != null){
+                if (!Objects.equals(checkType(left), checkType(right))) {
+                    try{
+                        ParserRuleContext context =  findParent(ctx);
+                        int errorIndex = ctx.CONDITION_OP().getSymbol().getCharPositionInLine();
+                        printError(context, "Type error: Operands are of different types: " + checkType(left) + ", " + checkType(right), errorIndex);
+                        System.exit(1);
+                    }catch(Exception e){
+                        ParserRuleContext context =  findParent(ctx);
+                        int errorIndex = ctx.CONDITION_OP().getSymbol().getCharPositionInLine();
+                        printError(context, "Type error: Operands are of different types: " + checkType(left) + ", " + checkType(right), errorIndex);
+                        System.exit(1); 
+                    }
+                    
+                }
+            }
+
+        } catch (NumberFormatException e) {
+            System.err.println("Error: Operands are not valid numbers");
+            System.exit(1);
+        }
+
+        if (op == null) {
+            return right;
+        }
+
+        // Perform arithmetic operation
+        switch (op) {
+            case ">":
+                return compareGreaterThan(left, right);
+            case ">=":
+                return compareGreaterThanOrEqual(left, right);
+            case "<":
+                return compareLessThan(left, right);
+            case "<=":
+                return compareLessThanOrEqual(left, right);
+            case "==":
+                return compareEqual(left, right);
+            case "!=":
+                return compareNotEqual(left, right);
+        }
+        return null;
+    }
 
     @Override
     public Object visitArithmeticOperation(SimpleScriptParser.ArithmeticOperationContext ctx) {
@@ -600,10 +692,10 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
         Object left = null;
         String op = null;
 
-        if (ctx.getChildCount() > 1) {
-            op = ctx.getChild(1).getText();
-            left = visit(ctx.conditionalOperation());
-        }
+        // if (ctx.getChildCount() > 1) {
+        //     op = ctx.getChild(1).getText();
+        //     left = visit(ctx.conditionalOperation());
+        // }
 
         // Check if left operand is a variable name
         if (left instanceof String) {
@@ -642,20 +734,6 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
         }
 
         // Perform comparison based on the operator
-        switch (op) {
-            case ">":
-                return compareGreaterThan(left, right);
-            case ">=":
-                return compareGreaterThanOrEqual(left, right);
-            case "<":
-                return compareLessThan(left, right);
-            case "<=":
-                return compareLessThanOrEqual(left, right);
-            case "==":
-                return compareEqual(left, right);
-            case "!=":
-                return compareNotEqual(left, right);
-        }
 
         return null;
     }
@@ -748,15 +826,15 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
         Object result = visit(ctx.logicalPrimary());
 
         // Check if the result is a variable name
-        if (result instanceof String) {
-            String varName = (String) result;
-            if (currentScope().containsKey(varName)) {
-                result = sourceVariable(varName);
-            } else {
-                // If it's not a variable, treat it as a literal value
-                return result;
-            }
-        }
+        // if (result instanceof String) {
+        //     String varName = (String) result;
+        //     if (currentScope().containsKey(varName)) {
+        //         result = sourceVariable(varName);
+        //     } else {
+        //         // If it's not a variable, treat it as a literal value
+        //         return result;
+        //     }
+        // }
 
         if (ctx.AND() != null && ctx.logicalFactor() != null) {
             Object nextFactorResult = visit(ctx.logicalFactor());
@@ -805,8 +883,8 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
             return visit(ctx.conditionalOperation());
         } else if (ctx.functionInvocation() != null) {
             return visit(ctx.functionInvocation());
-        } else if (ctx.arithmeticOperation() != null) {
-            return visit(ctx.arithmeticOperation());
+        } else if (ctx.conditionalArithmeticOperation() != null) {
+            return visit(ctx.conditionalArithmeticOperation());
         }
 
         return null;

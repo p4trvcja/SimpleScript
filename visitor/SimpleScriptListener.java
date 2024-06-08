@@ -1,4 +1,4 @@
-// Generated from SimpleScript.g4 by ANTLR 4.13.1
+// Generated from visitor/SimpleScript.g4 by ANTLR 4.13.1
 package visitor;
 import org.antlr.v4.runtime.tree.ParseTreeListener;
 
@@ -187,6 +187,16 @@ public interface SimpleScriptListener extends ParseTreeListener {
 	 * @param ctx the parse tree
 	 */
 	void exitExpr(SimpleScriptParser.ExprContext ctx);
+	/**
+	 * Enter a parse tree produced by {@link SimpleScriptParser#conditionalArithmeticOperation}.
+	 * @param ctx the parse tree
+	 */
+	void enterConditionalArithmeticOperation(SimpleScriptParser.ConditionalArithmeticOperationContext ctx);
+	/**
+	 * Exit a parse tree produced by {@link SimpleScriptParser#conditionalArithmeticOperation}.
+	 * @param ctx the parse tree
+	 */
+	void exitConditionalArithmeticOperation(SimpleScriptParser.ConditionalArithmeticOperationContext ctx);
 	/**
 	 * Enter a parse tree produced by {@link SimpleScriptParser#arithmeticOperation}.
 	 * @param ctx the parse tree
