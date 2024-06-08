@@ -1058,6 +1058,10 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
         String returnType = ctx.TYPE(0).getText();
         String functionName = ctx.NAME(0).getText();
 
+        if (ctx.block() == null) {
+            exitProgram("Error: Incomplete function definition.");
+        }
+
         if (ctx.block().returnStatement() != null && returnType.equals("void")) {
             exitProgram("Error: Void functions cannot contain a return statement.");
         }
@@ -1070,11 +1074,6 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
         }
 
         SimpleScriptParser.BlockContext block = ctx.block();
-
-        if (block.statement().isEmpty() && returnType.equals("void")) {
-            System.err.println("Error: Block context not found.");
-            System.exit(1);
-        }
 
 //        if (block.returnStatement() == null && !returnType.equals("void")) {
 //            System.err.println("Error: Non-void function should return a value.");
