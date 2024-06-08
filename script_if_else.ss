@@ -1,13 +1,23 @@
 
 
-
-int func(int h, int b){
-    void newFunc(int b){
+int f(){
+    int fs(){
         print(b);
-        print(h);
+        int b = 20;
+        return(2);
     };
-    newFunc(b);
-    return(h);
+    int b = 3;
+    //int b = 23;
+    fs();
+    print(i);
+    return(10);
 };
 
-print(func(10, 20));
+int i = 0;
+print(f());
+
+
+
+
+
+

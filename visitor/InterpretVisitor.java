@@ -1,5 +1,6 @@
 package visitor;
 import java.util.*;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import javax.swing.text.html.HTMLEditorKit.Parser;
@@ -8,27 +9,33 @@ import org.antlr.v4.runtime.ParserRuleContext;
 
 public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
     private int currentInstruction = 0;
+    private int id = 0;
     private Map<String, Map<List<Object>, Object>> memoizedResults = new HashMap<>();
     private final Map<String, FunctionInfo> functions = new HashMap<>();
     //private final Map<Integer, Map<String, Variable>> variables = new HashMap<>();
     private final Deque<Map<String, Variable>> scopeStack = new ArrayDeque<>();
     private final Stack<FunctionInfo> functionStack = new Stack<>();
-    private static final int MAX_RECURSION_DEPTH = 500; 
+    private final Deque<Map<String, FunctionInfo>> functionDeque = new ArrayDeque<>();
+    private static final int MAX_RECURSION_DEPTH = 16; 
     private int currentRecursionDepth = 0;
-    private Map<String, Variable> homeScope = new HashMap<>();
+    private Map<String, Variable> globalScope = new HashMap<>();
 
     public InterpretVisitor() {
         super();
         scopeStack.push(new HashMap<>());
+        functionDeque.push(new HashMap<>());
+        functionStack.push(null);
     }
     
     public static class Variable {
         private String type;
         private Object value;
+        private int scopeLevel;
     
-        public Variable(String type, Object value) {
+        public Variable(String type, Object value, int scopeLevel) {
             this.type = type;
             this.value = value;
+            this.scopeLevel = scopeLevel;
         }
     
         public String getType() {
@@ -57,18 +64,24 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
     }
 
     public static class FunctionInfo {
-        private static int ID = 1;
+        private int ID;
         private final String returnType;
         private final int parametersCount;
         private final SimpleScriptParser.BlockContext block;
+        private FunctionInfo parentFunction;
+        private Map<String, Variable> lexicalEnvironment = new HashMap<>();
+        private int parentId; 
         private final int functionID = ID++;
         public Map<String, Variable> parameters; // Add this line
 
-        public FunctionInfo(String returnType, SimpleScriptParser.BlockContext block, int parametersCount) {
+        public FunctionInfo(String returnType, SimpleScriptParser.BlockContext block, int parametersCount, int ID, int parentId, FunctionInfo parentFunction) {
             this.returnType = returnType;
             this.block = block;
             this.parametersCount = parametersCount;
             this.parameters = new LinkedHashMap<>();
+            this.ID = ID;
+            this.parentFunction = parentFunction;
+            this.parentId = parentId;
         }
 
         public SimpleScriptParser.BlockContext getBlock() {
@@ -161,12 +174,16 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
             }
 
             if (currentScope.containsKey(name)) {
-                int errorIndex = ctx.NAME(i).getSymbol().getCharPositionInLine();
-                printError(ctx, "Duplicate Error: Variable '" + name + "' has been declared", errorIndex);
-                System.exit(1);
+                if (currentScope.containsKey(name)) {
+                    if(currentScope.get(name).scopeLevel == scopeStack.size()){
+                        int errorIndex = ctx.NAME(i).getSymbol().getCharPositionInLine();
+                        printError(ctx, "Duplicate Error: Variable '" + name + "' has been declared", errorIndex);
+                        System.exit(1);
+                    }
+                }
             }
 
-            Variable variable = new Variable(type, value);
+            Variable variable = new Variable(type, value, scopeStack.size());
             currentScope.put(name, variable);
         }
 
@@ -211,11 +228,13 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
         for (int i = 0; i < ctx.NAME().size(); i++) {
             String name = ctx.NAME(i).getText();
             if (currentScope.containsKey(name)) {
-                int errorIndex = ctx.NAME(i).getSymbol().getCharPositionInLine();
-                printError(ctx, "Duplicate Error: Variable '" + name + "' has been declared", errorIndex);
-                System.exit(1);
+                if(currentScope.get(name).scopeLevel == scopeStack.size()){
+                    int errorIndex = ctx.NAME(i).getSymbol().getCharPositionInLine();
+                    printError(ctx, "Duplicate Error: Variable '" + name + "' has been declared", errorIndex);
+                    System.exit(1);
+                }
             }
-            Variable variable = new Variable(type, null);
+            Variable variable = new Variable(type, null, scopeStack.size());
             currentScope.put(name, variable);
         }
 
@@ -967,7 +986,7 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
         // Update the variable value
         Map<String, Variable> localVariables = currentScope();
         if (localVariables.containsKey(variableName)) {
-            Variable variable = new Variable(localVariables.get(variableName).getType(), value);
+            Variable variable = new Variable(localVariables.get(variableName).getType(), value, scopeStack.size());
             localVariables.put(variableName, variable);
         } else {
             System.err.println("Error: Variable '" + variableName + "' has not been declared");
@@ -1071,7 +1090,7 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
         for (int i = 1; i < ctx.NAME().size(); i++) {
             String type = ctx.TYPE(i).getText();
             String name = ctx.NAME(i).getText();
-            parameters.put(name, new Variable(type, null));
+            parameters.put(name, new Variable(type, null, scopeStack.size()));
         }
 
         SimpleScriptParser.BlockContext block = ctx.block();
@@ -1081,22 +1100,67 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
 //            System.exit(1);
 //        }
 
-        FunctionInfo functionInfo = new FunctionInfo(returnType, block, parameters.size());
-        functionInfo.parameters = parameters;
+        var currentFunction = functionStack.peek();
+        
+        if(currentFunction == null){
+            FunctionInfo functionInfo = new FunctionInfo(returnType, block, parameters.size(), id, -1, null);
+            id+=1;
+            functionInfo.parameters = parameters;
 
-        functions.put(functionName, functionInfo);
+            var currentFunctionStack = functionDeque.peek();
+            currentFunctionStack.put(functionName, functionInfo);
 
-        return null;
+            return null;
+        }else{
+            FunctionInfo functionInfo = new FunctionInfo(returnType, block, parameters.size(), id, currentFunction.parentId, currentFunction);
+            id+=1;
+            functionInfo.parameters = parameters;
+
+            var currentFunctionStack = functionDeque.peek();
+            currentFunctionStack.put(functionName, functionInfo);
+
+            return null;
+        }
     }
 
+
+    public Variable resolveVariable(String name) {
+        // Check the current local scope (top of the stack)
+        for (int i = scopeStack.size() - 1; i >= 0; i--) {
+            Map<String, Variable> currentScope = currentScope();
+            if (currentScope.containsKey(name)) {
+                return currentScope.get(name);
+            }
+        }
+        // Check the global scope
+        if (globalScope.containsKey(name)) {
+            return globalScope.get(name);
+        }
+        return null; // Variable not found
+    }
 
 
     public Object visitFunctionInvocation(SimpleScriptParser.FunctionInvocationContext ctx) {
         String functionName = ctx.NAME().getText();
-
-        if (!functions.containsKey(functionName)) {
+        try{
+            if (!functionDeque.peek().containsKey(functionName)) {
+                exitProgram("Error: Function '" + functionName + "' is not defined.");
+            }
+        }catch(Exception e){
             exitProgram("Error: Function '" + functionName + "' is not defined.");
         }
+
+        FunctionInfo functionInfo = functionDeque.peek().get(functionName);
+        FunctionInfo parentFunction = functionInfo.parentFunction;
+        Map<String, Variable> parentVariables = new HashMap<>();
+        
+        if(parentFunction != null){
+            parentVariables = parentFunction.lexicalEnvironment;
+        }else{
+            parentVariables = scopeStack.getLast();
+        }
+
+
 
         int originalRecursionDepth = currentRecursionDepth;
         currentRecursionDepth++;
@@ -1104,7 +1168,7 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
             exitProgram("Error: Stack overflow detected in function '" + functionName + "'. Recursion depth limit exceeded.");
         }
 
-        FunctionInfo functionInfo = functions.get(functionName);
+        
         if (Objects.equals(functionInfo.returnType, "void") && !(ctx.getParent() instanceof SimpleScriptParser.StatementContext)) {
             ParserRuleContext context = findParent(ctx);
             int errorIndex = ctx.NAME().getSymbol().getCharPositionInLine();
@@ -1119,25 +1183,29 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
 
         // Create a key for memoization based on the function name and arguments
         List<Object> argumentValues = arguments.stream().map(this::visit).collect(Collectors.toList());
-        if (memoizedResults.containsKey(functionName) && memoizedResults.get(functionName).containsKey(argumentValues)) {
-            currentRecursionDepth--;
-            return memoizedResults.get(functionName).get(argumentValues);
-        }
+        // if (memoizedResults.containsKey(functionName) && memoizedResults.get(functionName).containsKey(argumentValues)) {
+        //     currentRecursionDepth--;
+        //     return memoizedResults.get(functionName).get(argumentValues);
+        // }
 
         // Create a new scope for the function call
         int originalScopeSize = scopeStack.size();
+        int originalFunScopeSize = functionDeque.size();
         Map<String, Variable> localVariables = new HashMap<>();
+        functionDeque.peek().get(functionName).lexicalEnvironment = localVariables;
+        localVariables.putAll(parentVariables);
 
         // Assign the arguments to the parameters
         List<String> parameterNames = new ArrayList<>(functionInfo.parameters.keySet());
         for (int i = 0; i < arguments.size(); i++) {
             String parameterName = parameterNames.get(i);
             Variable parameter = functionInfo.parameters.get(parameterName);
-            localVariables.put(parameterName, new Variable(parameter.getType(), argumentValues.get(i)));
+            localVariables.put(parameterName, new Variable(parameter.getType(), argumentValues.get(i), scopeStack.size()+1));
         }
 
         scopeStack.push(localVariables);
         functionStack.push(functionInfo);
+        functionDeque.push(new HashMap<>(functionDeque.peek()));
 
         SimpleScriptParser.BlockContext ctx_f = functionInfo.getBlock();
         Object result = null;
@@ -1152,7 +1220,11 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
                 while (scopeStack.size() > originalScopeSize) {
                     scopeStack.pop();
                 }
+                while(functionDeque.size() > originalFunScopeSize){
+                    functionDeque.pop();
+                }
                 functionStack.pop();
+                // functionDeque.pop();
         
                 currentRecursionDepth--;
         
@@ -1167,7 +1239,11 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
             while (scopeStack.size() > originalScopeSize) {
                 scopeStack.pop();
             }
+            while(functionDeque.size() > originalFunScopeSize){
+                functionDeque.pop();
+            }
             functionStack.pop();
+            // functionDeque.pop();
     
             currentRecursionDepth--;
     
@@ -1185,13 +1261,18 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
         // Reset the scope stack to its original size efficiently
         while (scopeStack.size() > originalScopeSize) {
             scopeStack.pop();
+            // functionDeque.pop();
+        }
+        while(functionDeque.size() > originalFunScopeSize){
+            functionDeque.pop();
         }
         functionStack.pop();
+        // functionDeque.pop();
 
         currentRecursionDepth--;
 
         // Store the result in the memoization cache
-        memoizedResults.computeIfAbsent(functionName, k -> new HashMap<>()).put(argumentValues, result);
+        // memoizedResults.computeIfAbsent(functionName, k -> new HashMap<>()).put(argumentValues, result);
 
         return result;
     }
@@ -1248,6 +1329,7 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
     @Override
     public Object visitForLoop(SimpleScriptParser.ForLoopContext ctx) {
         scopeStack.push(new HashMap<>(currentScope()));
+        functionDeque.push(new HashMap<>(functionDeque.peek()));
         boolean isList = false;
         if(ctx.variableDefinition() != null) {
             SimpleScriptParser.VariableDefinitionContext variableDefinitionContext = ctx.variableDefinition();
@@ -1271,13 +1353,16 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
 
         while ((boolean) visit(conditionalOperationContext)) {
             scopeStack.push(new HashMap<>(currentScope()));
+            functionDeque.push(new HashMap<>(functionDeque.peek()));
             var value = visit(ctx.block());
 
             if (value != null) {
+                functionDeque.pop();
                 scopeStack.pop();
                 return value;
             }
 
+            functionDeque.pop();
             scopeStack.pop();
             if (singleValueOperationContext != null) {
                 visitSingleValueOperation(singleValueOperationContext);
@@ -1287,6 +1372,7 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
 
         }
         // Pop the loop scope from the stack after the loop completes
+        functionDeque.pop();    
         scopeStack.pop();
 
         return null;
@@ -1296,6 +1382,7 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
     public Object visitForLoopArray(SimpleScriptParser.ForLoopArrayContext ctx) {
         // Create a new scope for the loop
         scopeStack.push(new HashMap<>(currentScope()));
+        functionDeque.push(new HashMap<>(functionDeque.peek()));
 
         // Get the parameter and array name
         SimpleScriptParser.ParameterContext parameterCtx = ctx.parameter();
@@ -1318,18 +1405,21 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
         for (Object element : array) {
             // Create a new scope for each iteration
             scopeStack.push(new HashMap<>(currentScope()));
+            functionDeque.push(new HashMap<>(functionDeque.peek()));
             // Define the loop variable with the current element
-            currentScope().put(paramName, new Variable("var", element));
+            currentScope().put(paramName, new Variable("var", element, scopeStack.size()));
 
             // Execute the block
             visit(ctx.block());
 
             // Pop the inner loop scope
             scopeStack.pop();
+            functionDeque.pop();
         }
 
         // Pop the loop scope
         scopeStack.pop();
+        functionDeque.pop();
 
         return null;
     }
@@ -1402,7 +1492,7 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
             arguments = visit(ctx.arguments());
         }
 
-        Variable variable = new Variable(type, arguments);
+        Variable variable = new Variable(type, arguments, scopeStack.size());
 
         localVariables.put(name, variable);
 
