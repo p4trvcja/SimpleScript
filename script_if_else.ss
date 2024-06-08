@@ -1,11 +1,11 @@
-int fibonacci(int a) {
-    if (a == 0) {
-        return(0);
-    } elif (a == 1) {
+int factorial(int n){
+    int one(){
         return(1);
+    };
+    if((n==1) or (n ==0)){
+        return(one());
     }
-    return((fibonacci(a-1) + fibonacci(a-2)));
-    
+    return(n*factorial(n-1));
 };
 
-print(fibonacci(16));
+print(factorial(5));

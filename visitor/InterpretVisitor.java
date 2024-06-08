@@ -13,6 +13,8 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
     //private final Map<Integer, Map<String, Variable>> variables = new HashMap<>();
     private final Deque<Map<String, Variable>> scopeStack = new ArrayDeque<>();
     private final Stack<FunctionInfo> functionStack = new Stack<>();
+    private static final int MAX_RECURSION_DEPTH = 500; 
+    private int currentRecursionDepth = 0;
 
     public InterpretVisitor() {
         super();
@@ -1016,6 +1018,12 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
             exitProgram("Error: Function '" + functionName + "' is not defined.");
         }
 
+        int originalRecursionDepth = currentRecursionDepth;
+        currentRecursionDepth++;
+        if (currentRecursionDepth > MAX_RECURSION_DEPTH) {
+            exitProgram("Error: Stack overflow detected in function '" + functionName + "'. Recursion depth limit exceeded.");
+        }
+
         FunctionInfo functionInfo = functions.get(functionName);
         if (Objects.equals(functionInfo.returnType, "void") && !(ctx.getParent() instanceof SimpleScriptParser.StatementContext)) {
             ParserRuleContext context = findParent(ctx);
@@ -1032,6 +1040,7 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
         // Create a key for memoization based on the function name and arguments
         List<Object> argumentValues = arguments.stream().map(this::visit).collect(Collectors.toList());
         if (memoizedResults.containsKey(functionName) && memoizedResults.get(functionName).containsKey(argumentValues)) {
+            currentRecursionDepth--;
             return memoizedResults.get(functionName).get(argumentValues);
         }
 
@@ -1079,6 +1088,8 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
             scopeStack.pop();
         }
         functionStack.pop();
+
+        currentRecursionDepth--;
 
         // Store the result in the memoization cache
         memoizedResults.computeIfAbsent(functionName, k -> new HashMap<>()).put(argumentValues, result);
