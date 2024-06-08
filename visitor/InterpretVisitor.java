@@ -15,6 +15,7 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
     private final Stack<FunctionInfo> functionStack = new Stack<>();
     private static final int MAX_RECURSION_DEPTH = 500; 
     private int currentRecursionDepth = 0;
+    private Map<String, Variable> homeScope = new HashMap<>();
 
     public InterpretVisitor() {
         super();
@@ -1147,11 +1148,30 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
                 break;
             }
             if(value instanceof Exception){
+                while (scopeStack.size() > originalScopeSize) {
+                    scopeStack.pop();
+                }
+                functionStack.pop();
+        
+                currentRecursionDepth--;
+        
+                // Store the result in the memoization cache
+                memoizedResults.computeIfAbsent(functionName, k -> new HashMap<>()).put(argumentValues, result);
                 return null;
             }
+            // homeScope = scopeStack.peek();
         }
 
         if(result == null && Objects.equals(functionInfo.returnType, "void")){
+            while (scopeStack.size() > originalScopeSize) {
+                scopeStack.pop();
+            }
+            functionStack.pop();
+    
+            currentRecursionDepth--;
+    
+            // Store the result in the memoization cache
+            memoizedResults.computeIfAbsent(functionName, k -> new HashMap<>()).put(argumentValues, result);
             return null;
         }
         else if (result == null && ctx_f.returnStatement() != null) {
