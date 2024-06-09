@@ -1,19 +1,20 @@
-int fibonacci(int a) {
-    if (a == 0) {
-        return(0);
-    } elif (a == 1) {
+void fibonacci(int global) {
+    int new_fun(int global){
+        print(global);
         return(1);
-    }
-    return((fibonacci(a-1) + fibonacci(a-2)));
+    };
+    print(global);
+    new_fun(global);
+    return();
     
+    string x = "awbdkjawdb";
 };
 
-print(fibonacci(6));
-print(fibonacci(fibonacci(6)));
-print(fibonacci(8));
+int global = 524;
 
-print(fibonacci(fibonacci(fibonacci(8))));
+fibonacci(2);
 
+print(global);
 
 
 

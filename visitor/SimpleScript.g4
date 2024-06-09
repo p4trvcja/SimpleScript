@@ -17,6 +17,7 @@ statement: variableDeclaration
            | arrayDeclaration
            | arrayAssignment
            | printStatement
+           | returnStatement
            | expr SEMICOLON
            ; 
 
@@ -70,7 +71,6 @@ expr: value
       | conditionalOperation
       | singleValueOperation 
       | stringOperation
-      | returnStatement
       | arrayAccess
       | arrayOperation
       ; 
@@ -136,7 +136,7 @@ addOperation: ADD LPAREN NAME COMMA expr RPAREN;
 
 // COMPLEX STATEMENTS
 
-block : LBRACE statement* returnStatement? RBRACE;
+block : LBRACE statement* RBRACE;
 
 // loops
 iterationStatement: whileLoop

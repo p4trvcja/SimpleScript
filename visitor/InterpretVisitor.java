@@ -1042,10 +1042,10 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
                 return value;
         }
 
-        if (ctx.returnStatement() != null) {
+        // if (ctx.returnStatement() != null) {
 
-            return visit(ctx.returnStatement());
-        }
+        //     return visit(ctx.returnStatement());
+        // }
 
         // Pop the block scope from the stack after visiting all statements
         scopeStack.pop();
@@ -1061,6 +1061,12 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
         try {
             if(ctx.expr() == null && Objects.equals(functionInfo.returnType, "void")){
                 return new Exception();
+            }
+
+            if(functionStack.size() < 2){
+                int errorIndex = ctx.RETURN().getSymbol().getCharPositionInLine();
+                printError(ctx, ": Return statement not inside a function", errorIndex);
+                System.exit(1);
             }
 
             returnValue = visit(ctx.expr());
@@ -1116,11 +1122,11 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
             exitProgram("Error: Incomplete function definition.");
         }
 
-        if (ctx.block().returnStatement() != null && returnType.equals("void")) {
-            int errorIndex = ctx.block().getStart().getCharPositionInLine();
-            printError(ctx, "Error: Void functions cannot contain a return statement.", errorIndex);
-            System.exit(1);
-        }
+        // if (ctx.block().returnStatement() != null && returnType.equals("void")) {
+        //     int errorIndex = ctx.block().getStart().getCharPositionInLine();
+        //     printError(ctx, "Error: Void functions cannot contain a return statement.", errorIndex);
+        //     System.exit(1);
+        // }
 
         Map<String, Variable> parameters = new LinkedHashMap<>();
         for (int i = 1; i < ctx.NAME().size(); i++) {
@@ -1294,9 +1300,10 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
             memoizedResults.computeIfAbsent(functionName, k -> new HashMap<>()).put(argumentValues, result);
             return null;
         }
-        else if (result == null && ctx_f.returnStatement() != null) {
-            result = visit(ctx_f.returnStatement());
-        } else if (result == null && !Objects.equals(functionInfo.returnType, "void")) {
+        // else if (result == null && ctx_f.returnStatement() != null) {
+        //     result = visit(ctx_f.returnStatement());
+        // }
+        else if (result == null && !Objects.equals(functionInfo.returnType, "void")) {
             int errorIndex = ctx.NAME().getSymbol().getCharPositionInLine();
             printError(ctx, "Error: function: '" + functionName + "' should return a value", errorIndex);
             System.exit(1);
