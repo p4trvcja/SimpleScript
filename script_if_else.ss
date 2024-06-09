@@ -1,21 +1,18 @@
-
-
-int f(){
-    int fs(){
-        print(b);
-        int b = 20;
-        return(2);
-    };
-    int b = 3;
-    //int b = 23;
-    fs();
-    print(i);
-    return(10);
+int fibonacci(int a) {
+    if (a == 0) {
+        return(0);
+    } elif (a == 1) {
+        return(1);
+    }
+    return((fibonacci(a-1) + fibonacci(a-2)));
+    
 };
 
-int i = 0;
-print(f());
+print(fibonacci(6));
+print(fibonacci(fibonacci(6)));
+print(fibonacci(8));
 
+print(fibonacci(fibonacci(fibonacci(8))));
 
 
 

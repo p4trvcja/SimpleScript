@@ -16,7 +16,7 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
     private final Deque<Map<String, Variable>> scopeStack = new ArrayDeque<>();
     private final Stack<FunctionInfo> functionStack = new Stack<>();
     private final Deque<Map<String, FunctionInfo>> functionDeque = new ArrayDeque<>();
-    private static final int MAX_RECURSION_DEPTH = 16; 
+    private static final int MAX_RECURSION_DEPTH = 1000; 
     private int currentRecursionDepth = 0;
     private Map<String, Variable> globalScope = new HashMap<>();
 
@@ -1023,13 +1023,14 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
     @Override
     public Object visitReturnStatement(SimpleScriptParser.ReturnStatementContext ctx) {
         FunctionInfo functionInfo = functionStack.peek();
+        Object returnValue = new Object();
 
         try {
             if(ctx.expr() == null && Objects.equals(functionInfo.returnType, "void")){
                 return new Exception();
             }
 
-            Object returnValue = visit(ctx.expr());
+            returnValue = visit(ctx.expr());
 
             if (!Objects.equals(functionInfo.returnType, checkType(returnValue))) {
                 System.err.println("Type error: Function of return type '" + functionInfo.returnType + "' can't return: " + returnValue);
@@ -1045,8 +1046,6 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
                     };
 
         } catch (Exception e1) {
-
-            Object returnValue = visit(ctx.expr());
 
             if (returnValue instanceof String) {
                 returnValue = sourceVariable((String) returnValue);
