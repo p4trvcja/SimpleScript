@@ -1248,6 +1248,11 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
         List<String> parameterNames = new ArrayList<>(functionInfo.parameters.keySet());
         for (int i = 0; i < arguments.size(); i++) {
             String parameterName = parameterNames.get(i);
+            if(!Objects.equals(functionInfo.parameters.get(parameterName).getType(), checkType(argumentValues.get(i)))){
+                int errorIndex = ctx.LPAREN().getSymbol().getCharPositionInLine();
+                printError(ctx, "Error: Type mismatch in argument: " + parameterName, errorIndex);
+                System.exit(1);
+            }
             Variable parameter = functionInfo.parameters.get(parameterName);
             localVariables.put(parameterName, new Variable(parameter.getType(), argumentValues.get(i), scopeStack.size()+1));
         }
