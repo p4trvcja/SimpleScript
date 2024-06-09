@@ -297,6 +297,8 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
 
             Variable variable = currentScope.get(name);
 
+            int errorIndex = ctx.ASSIGNMENT().getSymbol().getCharPositionInLine();
+
             switch (ctx.ASSIGNMENT().getText()) {
                 case "+=":
                     if (baseVariable instanceof Integer && value instanceof Integer) {
@@ -304,7 +306,7 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
                     } else if (baseVariable instanceof Float && value instanceof Float) {
                         variable.setValue((float) baseVariable + (float) value);
                     } else {
-                        System.err.println("Error: The types of " + baseVariable + " and " + value + " vary. Cannot perform the assignment.");
+                        printError(ctx, "Error: The types of " + baseVariable + " and " + value + " vary. Cannot perform the assignment.", errorIndex);
                         System.exit(1);
                     }
                     break;
@@ -314,7 +316,7 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
                     } else if (baseVariable instanceof Float && value instanceof Float) {
                         variable.setValue((float) baseVariable - (float) value);
                     } else {
-                        System.err.println("Error: The types of " + baseVariable + " and " + value + " vary. Cannot perform the assignment.");
+                        printError(ctx, "Error: The types of " + baseVariable + " and " + value + " vary. Cannot perform the assignment.", errorIndex);
                         System.exit(1);
                     }
                     break;
@@ -324,7 +326,7 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
                     } else if (baseVariable instanceof Float && value instanceof Float) {
                         variable.setValue((float) baseVariable * (float) value);
                     } else {
-                        System.err.println("Error: The types of " + baseVariable + " and " + value + " vary. Cannot perform the assignment.");
+                        printError(ctx, "Error: The types of " + baseVariable + " and " + value + " vary. Cannot perform the assignment.", errorIndex);
                         System.exit(1);
                     }
                     break;
@@ -335,11 +337,11 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
                         } else if (baseVariable instanceof Float && value instanceof Float) {
                             variable.setValue((float) baseVariable / (float) value);
                         } else {
-                            System.err.println("Error: The types of " + baseVariable + " and " + value + "vary. Cannot perform the assignment.");
-                                    System.exit(1);
+                            printError(ctx, "Error: The types of " + baseVariable + " and " + value + " vary. Cannot perform the assignment.", errorIndex);
+                            System.exit(1);
                         }
                     } catch (ArithmeticException e) {
-                        System.err.println("Error: Division by 0.");
+                        printError(ctx, "Error: Dividing by zero is not allowed.", errorIndex);
                         System.exit(1);
                     }
                     break;
@@ -554,7 +556,8 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
             }
 
         } catch (NumberFormatException e) {
-            System.err.println("Error: Operands are not valid numbers");
+            int errorIndex = ctx.CONDITION_OP().getSymbol().getCharPositionInLine();
+            printError(ctx, "Error: Operands are not valid numbers", errorIndex);
             System.exit(1);
         }
 
@@ -647,7 +650,8 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
             }
 
         } catch (NumberFormatException e) {
-            System.err.println("Error: Operands are not valid numbers");
+            int errorIndex = ctx.arithmeticOperation().getStart().getCharPositionInLine();
+            printError(ctx, "Error: Operands are not valid numbers.", errorIndex);
             System.exit(1);
         }
 
@@ -727,7 +731,8 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
                 try {
                     left = parseValue(leftVarName);
                 } catch (NumberFormatException e) {
-                    System.err.println("Error: Invalid value for left operand");
+                    int errorIndex = ctx.logicalTerm().getStart().getCharPositionInLine();
+                    printError(ctx, "Error: Invalid value for left operand", errorIndex);
                     System.exit(1);
                 }
             }
@@ -828,14 +833,27 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
         if (ctx.OR() != null && ctx.logicalTerm() != null) {
             Object nextFactorResult = visit(ctx.logicalTerm());
 
+            boolean boolResult = false;
+            boolean nextBoolResult = false;
+
             try {
-                boolean boolResult = result instanceof String ? (boolean) parseValue((String) result) : (boolean) result;
-                boolean nextBoolResult = nextFactorResult instanceof String ? (boolean) parseValue((String) nextFactorResult) : (boolean) nextFactorResult;
-                return boolResult || nextBoolResult;
-            } catch (NumberFormatException e) {
-                System.err.println("Error: Invalid boolean value");
+                boolResult = result instanceof String ? (boolean) parseValue((String) result) : (boolean) result;
+            } catch (ClassCastException e) {
+                int errorIndex = ctx.logicalFactor().getStart().getCharPositionInLine();
+                printError(ctx, "Error: Invalid boolean value", errorIndex);
                 System.exit(1);
             }
+
+            try {
+                nextBoolResult = nextFactorResult instanceof String ? (boolean) parseValue((String) nextFactorResult) : (boolean) nextFactorResult;
+
+            } catch (ClassCastException e) {
+                int errorIndex = ctx.logicalTerm().getStart().getCharPositionInLine();
+                printError(ctx, "Error: Invalid boolean value", errorIndex);
+                System.exit(1);
+            }
+
+            return boolResult || nextBoolResult;
         }
 
         return result;
@@ -859,14 +877,26 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
         if (ctx.AND() != null && ctx.logicalFactor() != null) {
             Object nextFactorResult = visit(ctx.logicalFactor());
 
+            boolean boolResult = false;
+            boolean nextBoolResult = false;
+
             try {
-                boolean boolResult = result instanceof String ? (boolean) parseValue((String) result) : (boolean) result;
-                boolean nextBoolResult = nextFactorResult instanceof String ? (boolean) parseValue((String) nextFactorResult) : (boolean) nextFactorResult;
-                return boolResult && nextBoolResult;
-            } catch (NumberFormatException e) {
-                System.err.println("Error: Invalid boolean value");
+                 boolResult = result instanceof String ? (boolean) parseValue((String) result) : (boolean) result;
+            } catch (ClassCastException e) {
+                int errorIndex = ctx.logicalPrimary().getStart().getCharPositionInLine();
+                printError(ctx, "Error: Invalid boolean value", errorIndex);
                 System.exit(1);
             }
+
+            try {
+                 nextBoolResult = nextFactorResult instanceof String ? (boolean) parseValue((String) nextFactorResult) : (boolean) nextFactorResult;
+            } catch (ClassCastException e) {
+                int errorIndex = ctx.logicalFactor().getStart().getCharPositionInLine();
+                printError(ctx, "Error: Invalid boolean value", errorIndex);
+                System.exit(1);
+            }
+
+            return boolResult && nextBoolResult;
         }
 
         return result;
@@ -898,7 +928,8 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
                 boolean boolResult = result instanceof String ? (boolean) parseValue((String) result) : (boolean) result;
                 return !boolResult;
             } catch (ClassCastException e) {
-                System.err.println("Error: Invalid boolean value");
+                int errorIndex = ctx.logicalPrimary().getStart().getCharPositionInLine();
+                printError(ctx, "Error: Invalid boolean value", errorIndex);
                 System.exit(1);
             }
         } else if (ctx.conditionalOperation() != null) {
@@ -960,7 +991,8 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
         Object value = sourceVariable(variableName);
 
         if(value == null){
-            System.err.println("Error: Variable '" + variableName + "' might not have been initialized");
+            int errorIndex = ctx.NAME().getSymbol().getCharPositionInLine();
+            printError(ctx, "Error: Variable '" + variableName + "' might not have been initialized", errorIndex);
             System.exit(1);
         }
 
@@ -989,7 +1021,8 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
             Variable variable = new Variable(localVariables.get(variableName).getType(), value, scopeStack.size());
             localVariables.put(variableName, variable);
         } else {
-            System.err.println("Error: Variable '" + variableName + "' has not been declared");
+            int errorIndex = ctx.NAME().getSymbol().getCharPositionInLine();
+            printError(ctx, "Error: Variable '" + variableName + "' has not been declared", errorIndex);
             System.exit(1);
         }
     
@@ -1033,7 +1066,8 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
             returnValue = visit(ctx.expr());
 
             if (!Objects.equals(functionInfo.returnType, checkType(returnValue))) {
-                System.err.println("Type error: Function of return type '" + functionInfo.returnType + "' can't return: " + returnValue);
+                int errorIndex = ctx.expr().getStart().getCharPositionInLine();
+                printError(ctx, "Type error: Function of return type '" + functionInfo.returnType + "' can't return: " + returnValue, errorIndex);
                 System.exit(1);
             }
 
@@ -1059,8 +1093,9 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
                     default -> throw new RuntimeException();
                 };
             } catch (Exception e2) {
-                System.out.println(e2);
-                exitProgram("Error: Return type and value type don't match");
+                int errorIndex = ctx.expr().getStart().getCharPositionInLine();
+                printError(ctx, "Type error: Function of return type '" + functionInfo.returnType + "' can't return: " + returnValue, errorIndex);
+                System.exit(1);
             }
         }
 
@@ -1082,7 +1117,9 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
         }
 
         if (ctx.block().returnStatement() != null && returnType.equals("void")) {
-            exitProgram("Error: Void functions cannot contain a return statement.");
+            int errorIndex = ctx.block().getStart().getCharPositionInLine();
+            printError(ctx, "Error: Void functions cannot contain a return statement.", errorIndex);
+            System.exit(1);
         }
 
         Map<String, Variable> parameters = new LinkedHashMap<>();
@@ -1141,12 +1178,16 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
 
     public Object visitFunctionInvocation(SimpleScriptParser.FunctionInvocationContext ctx) {
         String functionName = ctx.NAME().getText();
-        try{
+        try {
             if (!functionDeque.peek().containsKey(functionName)) {
-                exitProgram("Error: Function '" + functionName + "' is not defined.");
+                int errorIndex = ctx.NAME().getSymbol().getCharPositionInLine();
+                printError(ctx, "Error: Function '" + functionName + "' is not defined.", errorIndex);
+                System.exit(1);
             }
-        }catch(Exception e){
-            exitProgram("Error: Function '" + functionName + "' is not defined.");
+        } catch(Exception e){
+            int errorIndex = ctx.NAME().getSymbol().getCharPositionInLine();
+            printError(ctx, "Error: Function '" + functionName + "' is not defined.", errorIndex);
+            System.exit(1);
         }
 
         FunctionInfo functionInfo = functionDeque.peek().get(functionName);
@@ -1163,6 +1204,7 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
 
         int originalRecursionDepth = currentRecursionDepth;
         currentRecursionDepth++;
+
         if (currentRecursionDepth > MAX_RECURSION_DEPTH) {
             exitProgram("Error: Stack overflow detected in function '" + functionName + "'. Recursion depth limit exceeded.");
         }
@@ -1177,7 +1219,9 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
         List<SimpleScriptParser.ExprContext> arguments = ctx.expr();
 
         if (arguments.size() != functionInfo.parametersCount) {
-            exitProgram("Error: Function '" + functionName + "' expects " + functionInfo.parametersCount + " arguments, but got " + arguments.size());
+            int errorIndex = ctx.LPAREN().getSymbol().getCharPositionInLine();
+            printError(ctx, "Error: Function '" + functionName + "' expects " + functionInfo.parametersCount + " arguments, but got " + arguments.size(), errorIndex);
+            System.exit(1);
         }
 
         // Create a key for memoization based on the function name and arguments
@@ -1253,7 +1297,8 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
         else if (result == null && ctx_f.returnStatement() != null) {
             result = visit(ctx_f.returnStatement());
         } else if (result == null && !Objects.equals(functionInfo.returnType, "void")) {
-            System.err.println("Error: function: '" + functionName + "' should return a value");
+            int errorIndex = ctx.NAME().getSymbol().getCharPositionInLine();
+            printError(ctx, "Error: function: '" + functionName + "' should return a value", errorIndex);
             System.exit(1);
         }
 
