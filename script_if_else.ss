@@ -1,9 +1,11 @@
 
 
-int fun(int b, int c){
-    print(b);
+int fun(float pr){
     return(2);
+    dwadad;
 };
 
 
-fun(12, 1.234);
+int awd = 10;
+string ale = "1";
+ale + awd;

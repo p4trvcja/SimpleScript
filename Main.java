@@ -30,7 +30,7 @@ public class Main{
         lexer.removeErrorListeners();
         parser.removeErrorListeners();
 
-        CustomErrorListener errorListener = new CustomErrorListener();
+        CustomErrorListener errorListener = new CustomErrorListener(inputFilePath);
         lexer.addErrorListener(errorListener);
         parser.addErrorListener(errorListener);
 
