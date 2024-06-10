@@ -175,11 +175,15 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
                 int errorIndex = ctx.expr(i).getStart().getCharPositionInLine();
                 printError(ctx, "Type error: Variable '" + name + "' can't be assigned type: string", errorIndex);
                 System.exit(1);
+            }else if (!Objects.equals(type, checkType(value))) {
+                int errorIndex = ctx.expr(i).getStart().getCharPositionInLine();
+                printError(ctx, "Type error: Variable '" + name + "' can't be assigned type: " + checkType(value), errorIndex);
+                System.exit(1);
             }
 
             if (currentScope.containsKey(name)) {
                 if (currentScope.containsKey(name)) {
-                    if(currentScope.get(name).scopeLevel == scopeStack.size()){
+                    if(currentScope.get(name).scopeLevel == functionDeque.size()){
                         int errorIndex = ctx.NAME(i).getSymbol().getCharPositionInLine();
                         printError(ctx, "Duplicate Error: Variable '" + name + "' has been declared", errorIndex);
                         System.exit(1);
@@ -187,7 +191,7 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
                 }
             }
 
-            Variable variable = new Variable(type, value, scopeStack.size());
+            Variable variable = new Variable(type, value, functionDeque.size());
             currentScope.put(name, variable);
         }
 
@@ -232,13 +236,13 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
         for (int i = 0; i < ctx.NAME().size(); i++) {
             String name = ctx.NAME(i).getText();
             if (currentScope.containsKey(name)) {
-                if(currentScope.get(name).scopeLevel == scopeStack.size()){
+                if(currentScope.get(name).scopeLevel == functionDeque.size()){
                     int errorIndex = ctx.NAME(i).getSymbol().getCharPositionInLine();
                     printError(ctx, "Duplicate Error: Variable '" + name + "' has been declared", errorIndex);
                     System.exit(1);
                 }
             }
-            Variable variable = new Variable(type, null, scopeStack.size());
+            Variable variable = new Variable(type, null, functionDeque.size());
             currentScope.put(name, variable);
         }
 
@@ -413,9 +417,29 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
         if (ctx.term() != null) {
             Object nextFactorResult = visit(ctx.term());
             if (ctx.MUL() != null) {
+                if(!Objects.equals(checkType(result), checkType(nextFactorResult))){
+                    ParserRuleContext context =  findParent(ctx);
+                    int errorIndex = ctx.MUL().getSymbol().getCharPositionInLine();
+                    printError(context, "Type error: Operands are of different types: " + checkType(result) + ", " + checkType(nextFactorResult), errorIndex);
+                    System.exit(1);
+                }
                 result = multiply(result, nextFactorResult);
             } else if (ctx.DIV() != null) {
-                result = divide(result, nextFactorResult);
+                try{
+                    if(!Objects.equals(checkType(result), checkType(nextFactorResult))){
+                        ParserRuleContext context =  findParent(ctx);
+                        int errorIndex = ctx.DIV().getSymbol().getCharPositionInLine();
+                        printError(context, "Type error: Operands are of different types: " + checkType(result) + ", " + checkType(nextFactorResult), errorIndex);
+                        System.exit(1);
+                    }
+                    result = divide(result, nextFactorResult);
+                }catch(Exception e){
+                    ParserRuleContext context =  findParent(ctx);
+                    int errorIndex = ctx.DIV().getSymbol().getCharPositionInLine();
+                    printError(context, "Error: Division by zero", errorIndex);
+                    System.exit(1);
+                }
+
             }
         }
 
@@ -482,7 +506,7 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
         }
         // Perform division
         if (a instanceof Integer && b instanceof Integer) {
-            if ((int) a == 0) {
+            if (((Integer) a).intValue() == 0) {
                 throw new ArithmeticException("Division by zero");
             }
             return (int) b / (int) a;
@@ -594,12 +618,12 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
     @Override
     public Object visitArithmeticOperation(SimpleScriptParser.ArithmeticOperationContext ctx) {
         Object right = visit(ctx.term());
-        if(ctx.term().factor().value().STRING() != null){
+        if(ctx.term().factor().value() != null && ctx.term().factor().value().STRING() != null){
             ParserRuleContext context =  findParent(ctx);
             int errorIndex = ctx.term().factor().value().STRING().getSymbol().getCharPositionInLine();
             printError(context, "Type error: String value detected in arithmetic operation: '" + right + "'", errorIndex);
             System.exit(1);
-        }else if(ctx.term().factor().value().NAME() != null && Objects.equals(currentScope().get(ctx.term().factor().value().NAME().getText()).type, "string")){
+        }else if(ctx.term().factor().value() != null && ctx.term().factor().value().NAME() != null && Objects.equals(currentScope().get(ctx.term().factor().value().NAME().getText()).type, "string")){
             ParserRuleContext context =  findParent(ctx);
             int errorIndex = ctx.term().factor().value().NAME().getSymbol().getCharPositionInLine();
             printError(context, "Type error: String value detected in arithmetic operation: '" + right + "'", errorIndex);
@@ -681,7 +705,8 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
         // Perform arithmetic operation
         switch (op) {
             case "+":
-                return add(left, right);
+                var val = add(left, right);
+                return val;
             case "-":
                 return subtract(left, right);
             default:
@@ -705,9 +730,9 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
     // Helper method to perform addition
     private Object add(Object left, Object right) {
         if (left instanceof Integer && right instanceof Integer) {
-            return (int) left + (int) right;
+            return ((Integer) left).intValue()+((Integer) right).intValue();
         } else if (left instanceof Float && right instanceof Float) {
-            return (float) left + (float) right;
+            return ((Float) left).floatValue()+((Float) right).floatValue();
         } else {
             System.err.println("Error: Unsupported operand types for addition");
             System.exit(1);
@@ -1404,7 +1429,6 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
     @Override
     public Object visitForLoop(SimpleScriptParser.ForLoopContext ctx) {
         scopeStack.push(new HashMap<>(currentScope()));
-        functionDeque.push(new HashMap<>(functionDeque.peek()));
         boolean isList = false;
         if(ctx.variableDefinition() != null) {
             SimpleScriptParser.VariableDefinitionContext variableDefinitionContext = ctx.variableDefinition();
@@ -1428,16 +1452,13 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
 
         while ((boolean) visit(conditionalOperationContext)) {
             scopeStack.push(new HashMap<>(currentScope()));
-            functionDeque.push(new HashMap<>(functionDeque.peek()));
             var value = visit(ctx.block());
 
             if (value != null) {
-                functionDeque.pop();
                 scopeStack.pop();
                 return value;
             }
 
-            functionDeque.pop();
             scopeStack.pop();
             if (singleValueOperationContext != null) {
                 visitSingleValueOperation(singleValueOperationContext);
@@ -1447,7 +1468,6 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
 
         }
         // Pop the loop scope from the stack after the loop completes
-        functionDeque.pop();    
         scopeStack.pop();
 
         return null;
@@ -1457,7 +1477,6 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
     public Object visitForLoopArray(SimpleScriptParser.ForLoopArrayContext ctx) {
         // Create a new scope for the loop
         scopeStack.push(new HashMap<>(currentScope()));
-        functionDeque.push(new HashMap<>(functionDeque.peek()));
 
         // Get the parameter and array name
         SimpleScriptParser.ParameterContext parameterCtx = ctx.parameter();
@@ -1480,7 +1499,6 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
         for (Object element : array) {
             // Create a new scope for each iteration
             scopeStack.push(new HashMap<>(currentScope()));
-            functionDeque.push(new HashMap<>(functionDeque.peek()));
             // Define the loop variable with the current element
             currentScope().put(paramName, new Variable("var", element, scopeStack.size()));
 
@@ -1489,12 +1507,10 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
 
             // Pop the inner loop scope
             scopeStack.pop();
-            functionDeque.pop();
         }
 
         // Pop the loop scope
         scopeStack.pop();
-        functionDeque.pop();
 
         return null;
     }

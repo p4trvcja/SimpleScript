@@ -3,16 +3,17 @@
 
 
 
-
-
-
-
-
-int calculateFactorial(int n){
-    if(n == 6){
-        return(3);
+void fun(int b){
+    int i = 20;
+    for(i = 0; i<b; i++){
+        if(i == 4){
+            print(i);
+        }
     }
 };
 
-int number = 5;
-print(calculateFactorial(number));
+int i = 0;
+fun(10);
+
+
+
