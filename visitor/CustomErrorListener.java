@@ -80,6 +80,18 @@ public class CustomErrorListener extends BaseErrorListener {
             System.err.println(customizedMsg);
             System.exit(1);
         }else if(msg.contains("no viable alternative at input")){
+            if(errorLine.length()-charPositionInLine == errorLine.strip().length()){
+                errorLine = getErrorLine(charStream, line-1);
+                charPositionInLine = errorLine.length();
+                String beginning = "File '" + filePath + "', line "+ line + ":" + (charPositionInLine);
+                String middle = "SyntaxError: Missing ';'";
+                String customizedMsg =  "\n"+ beginning + "\n" + middle + "\n\n";
+                customizedMsg += "\t" + errorLine + "\n";
+                customizedMsg += "\t" + " ".repeat(charPositionInLine) + "^";
+                // Print the customized error message
+                System.err.println(customizedMsg);
+                System.exit(1);
+            }
             String beginning = "File '" + filePath + "', line "+ line + ":" + (charPositionInLine);
             String middle = "SyntaxError: Invalid syntax";
             String customizedMsg =  "\n"+ beginning + "\n" + middle + "\n\n";
