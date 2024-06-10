@@ -33,6 +33,11 @@ public class CustomErrorListener extends BaseErrorListener {
                 errorLine = getErrorLine(charStream, line);
                 charPositionInLine = errorLine.length();
             }
+            while(errorLine.length()<2 || errorLine.strip().endsWith(";")){
+                line -= 1;
+                errorLine = getErrorLine(charStream, line);
+                charPositionInLine = errorLine.length();
+            }
             String beginning = "File '" + filePath + "', line "+ line + ":" + (charPositionInLine);
             String middle = "SyntaxError: " + "missing " + msg.split(" ")[1];
             String customizedMsg =  "\n"+ beginning + "\n" + middle + "\n\n";
