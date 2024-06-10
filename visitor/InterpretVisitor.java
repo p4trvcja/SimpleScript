@@ -19,9 +19,11 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
     private static final int MAX_RECURSION_DEPTH = 1000; 
     private int currentRecursionDepth = 0;
     private Map<String, Variable> globalScope = new HashMap<>();
+    private String filePath = "script.ss";
 
-    public InterpretVisitor() {
+    public InterpretVisitor(String filePath) {
         super();
+        this.filePath = filePath;
         scopeStack.push(new HashMap<>());
         functionDeque.push(new HashMap<>());
         functionStack.push(null);
@@ -119,30 +121,15 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
                 ctx.getStop().getStopIndex()
         ));
 
-        // Calculate the position of the caret considering tab expansion up to the error index
-//        int expandedPosition = 0;
-//        for (int i = 0; i < charPositionInLine; i++) {
-//            if (errorLine.charAt(i) == '\t') {
-//                expandedPosition += 4; // assuming a tab width of 4 spaces
-//            } else {
-//                expandedPosition++;
-//            }
-//        }
+        String beginning = "File '" + filePath + "', line "+ line + ":" + (charPositionInLine+errorIndex);
+        String middle = message;
+        String customizedMsg =  "\n"+ beginning + "\n" + middle + "\n\n";
+        customizedMsg += "\t" + errorLine + "\n";
+        customizedMsg += "\t" + " ".repeat(errorIndex) + "^";
+        // Print the customized error message
+        System.err.println(customizedMsg);
+        System.exit(1);
 
-        // Adjust the position for the error index
-//        for (int i = charPositionInLine; i < charPositionInLine + errorIndex; i++) {
-//            if (i < errorLine.length() && errorLine.charAt(i) == '\t') {
-//                expandedPosition += 4; // assuming a tab width of 4 spaces
-//            } else {
-//                expandedPosition++;
-//            }
-//        }
-
-        System.err.println("error: line " + line + ":" + (charPositionInLine + errorIndex) + " " + message);
-        for (int i = 0; i < charPositionInLine; i++) System.err.print(" ");
-        System.err.println(errorLine);
-        for (int i = 0; i < errorIndex; i++) System.err.print(" ");
-        System.err.println("^");
     }
 
 

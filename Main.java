@@ -1,6 +1,8 @@
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+
+import org.antlr.v4.parse.ANTLRParser.finallyClause_return;
 import org.antlr.v4.runtime.CharStreams;
 import org.antlr.v4.runtime.CodePointCharStream;
 import org.antlr.v4.runtime.CommonTokenStream;
@@ -13,13 +15,13 @@ import visitor.SimpleScriptParser;
 
 public class Main{
     public static void main(String[] args) throws Exception {
-        if (args.length < 1) {
-            System.err.println("Usage: java SimpleScriptInterpreter <input_file>");
-            System.exit(1);
-        }
+//         if (args.length < 1) {
+//             System.err.println("Usage: java SimpleScriptInterpreter <input_file>");
+//             System.exit(1);
+//         }
 
-        String inputFilePath = args[0];
-//        String inputFilePath = "script_if_else.ss";
+//         String inputFilePath = args[0];
+       String inputFilePath = "script_if_else.ss";
         String code = readFile(inputFilePath);
 
         CodePointCharStream input = CharStreams.fromString(code);
@@ -37,7 +39,7 @@ public class Main{
 
         ParseTree tree = parser.script();
 
-        InterpretVisitor interpreter = new InterpretVisitor();
+        InterpretVisitor interpreter = new InterpretVisitor(inputFilePath);
         interpreter.visit(tree);
     }
 
