@@ -4,22 +4,16 @@ int fibonacci(int a) {
     } elif (a == 1) {
         return(1);
     }
-    return((fibonacci(a-1) + fibonacci(a-2)));
-
-};
-
-print(fibonacci(20));
-
-
-
-int newFibbo(int a){
-    if (a == 0) {
-            return(0);
-        } elif (a == 1) {
-            return(1);
-        }
+    else{
         return((fibonacci(a-1) + fibonacci(a-2)));
+    }
+
+
 };
 
-print(newFibbo(21));
+print(fibonacci(6));
+print(fibonacci(fibonacci(6)));
+print(fibonacci(8));
+
+print(fibonacci(fibonacci(fibonacci(7))));
 

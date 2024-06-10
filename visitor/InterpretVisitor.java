@@ -153,9 +153,13 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
 //                value = ((Float) value).intValue();
 //            }
 
-            if (!Objects.equals(type, checkType(value))) {
+            if ((ctx.expr().get(i).value().STRING() == null && Objects.equals(type, "string")) &&!Objects.equals(type, checkType(value))) {
                 int errorIndex = ctx.expr(i).getStart().getCharPositionInLine();
                 printError(ctx, "Type error: Variable '" + name + "' can't be assigned type: " + checkType(value), errorIndex);
+                System.exit(1);
+            }else if ((ctx.expr().get(i).value().STRING() != null && !Objects.equals(type, "string"))) {
+                int errorIndex = ctx.expr(i).getStart().getCharPositionInLine();
+                printError(ctx, "Type error: Variable '" + name + "' can't be assigned type: string", errorIndex);
                 System.exit(1);
             }
 
@@ -332,6 +336,10 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
 
     @Override
     public Object visitPrintStatement(SimpleScriptParser.PrintStatementContext ctx) {
+        if(ctx.expr() == null){
+            System.out.println();
+            return null;
+        }
         Object value = visit(ctx.expr());
 
         Map<String, Variable> localVariables = currentScope();
@@ -471,6 +479,17 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
     @Override
     public Object visitArithmeticOperation(SimpleScriptParser.ArithmeticOperationContext ctx) {
         Object right = visit(ctx.term());
+        if(ctx.term().factor().value().STRING() != null){
+            ParserRuleContext context =  findParent(ctx);
+            int errorIndex = ctx.term().factor().value().STRING().getSymbol().getCharPositionInLine();
+            printError(context, "Type error: String value detected in arithmetic operation: '" + right + "'", errorIndex);
+            System.exit(1);
+        }else if(ctx.term().factor().value().NAME() != null && Objects.equals(currentScope().get(ctx.term().factor().value().NAME().getText()).type, "string")){
+            ParserRuleContext context =  findParent(ctx);
+            int errorIndex = ctx.term().factor().value().NAME().getSymbol().getCharPositionInLine();
+            printError(context, "Type error: String value detected in arithmetic operation: '" + right + "'", errorIndex);
+            System.exit(1);
+        }
         Object left = null;
         String op = null;
 

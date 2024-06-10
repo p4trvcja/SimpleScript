@@ -53,7 +53,7 @@ arrayAssignment: NAME ASSIGN LBRACK arguments? RBRACK SEMICOLON;
 arrayAccess: NAME LBRACK expr RBRACK;
 
 // printing   
-printStatement: PRINT LPAREN expr RPAREN SEMICOLON;
+printStatement: PRINT LPAREN expr? RPAREN SEMICOLON;
  
 // expresions
 // expr: expr ARITHMETIC_OP expr 
