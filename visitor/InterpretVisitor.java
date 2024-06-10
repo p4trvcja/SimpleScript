@@ -167,18 +167,20 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
 //                value = ((Float) value).intValue();
 //            }
 
-            if ((ctx.expr().get(i).value().STRING() == null && Objects.equals(type, "string")) &&!Objects.equals(type, checkType(value))) {
-                int errorIndex = ctx.expr(i).getStart().getCharPositionInLine();
-                printError(ctx, "Type error: Variable '" + name + "' can't be assigned type: " + checkType(value), errorIndex);
-                System.exit(1);
-            }else if ((ctx.expr().get(i).value().STRING() != null && !Objects.equals(type, "string"))) {
-                int errorIndex = ctx.expr(i).getStart().getCharPositionInLine();
-                printError(ctx, "Type error: Variable '" + name + "' can't be assigned type: string", errorIndex);
-                System.exit(1);
-            }else if (!Objects.equals(type, checkType(value))) {
-                int errorIndex = ctx.expr(i).getStart().getCharPositionInLine();
-                printError(ctx, "Type error: Variable '" + name + "' can't be assigned type: " + checkType(value), errorIndex);
-                System.exit(1);
+            if (ctx.expr().get(i).value() != null){
+                if ((ctx.expr().get(i).value().STRING() == null && Objects.equals(type, "string")) && !Objects.equals(type, checkType(value))) {
+                    int errorIndex = ctx.expr(i).getStart().getCharPositionInLine();
+                    printError(ctx, "Type error: Variable '" + name + "' can't be assigned type: " + checkType(value), errorIndex);
+                    System.exit(1);
+                } else if ((ctx.expr().get(i).value().STRING() != null && !Objects.equals(type, "string"))) {
+                    int errorIndex = ctx.expr(i).getStart().getCharPositionInLine();
+                    printError(ctx, "Type error: Variable '" + name + "' can't be assigned type: string", errorIndex);
+                    System.exit(1);
+                } else if (!Objects.equals(type, checkType(value))) {
+                    int errorIndex = ctx.expr(i).getStart().getCharPositionInLine();
+                    printError(ctx, "Type error: Variable '" + name + "' can't be assigned type: " + checkType(value), errorIndex);
+                    System.exit(1);
+                }
             }
 
             if (currentScope.containsKey(name)) {

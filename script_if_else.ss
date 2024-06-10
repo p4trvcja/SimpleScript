@@ -3,17 +3,19 @@
 
 
 
-void fun(int b){
-    int i = 20;
-    for(i = 0; i<b; i++){
-        if(i == 4){
-            print(i);
-        }
-    }
+int sum(int a, int b){
+    print((((3))));
+    return((a/12)+b*12-1244+12);
 };
 
-int i = 0;
-fun(10);
 
+int x(int d){
+    int new = sum(3,5);
+    print(new);
+    print(d);
+    return(10);
+};
 
+x(30);
+print(sum(1,2));
 
