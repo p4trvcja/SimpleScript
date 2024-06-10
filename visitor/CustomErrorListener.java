@@ -102,6 +102,20 @@ public class CustomErrorListener extends BaseErrorListener {
             // Print the customized error message
             System.err.println(customizedMsg);
             System.exit(1);
+        }else if(msg.contains("mismatched input") && msg.contains("expecting") && msg.endsWith("\'(\'")){
+            if(charPositionInLine-1<0){
+                line -= 1;
+                errorLine = getErrorLine(charStream, line);
+                charPositionInLine = errorLine.length();
+            }
+            String beginning = "File '" + filePath + "', line "+ line + ":" + (charPositionInLine);
+            String middle = "SyntaxError: missing \'(\'";
+            String customizedMsg =  "\n"+ beginning + "\n" + middle + "\n\n";
+            customizedMsg += "\t" + errorLine + "\n";
+            customizedMsg += "\t" + " ".repeat(charPositionInLine) + "^";
+            // Print the customized error message
+            System.err.println(customizedMsg);
+            System.exit(1);
         }else if(msg.contains("extraneous input \';\'") && msg.contains("expecting") && msg.contains("<EOF>")){
             String beginning = "File '" + filePath + "', line "+ line + ":" + (charPositionInLine);
             String middle = "SyntaxError: expecting statement or end of file, got \';\'";
