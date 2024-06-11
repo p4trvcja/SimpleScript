@@ -125,7 +125,7 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
         String middle = message;
         String customizedMsg =  "\n"+ beginning + "\n" + middle + "\n\n";
         customizedMsg += "\t" + errorLine + "\n";
-        customizedMsg += "\t" + " ".repeat(errorIndex) + "^";
+        customizedMsg += "\t" + " ".repeat(errorIndex-charPositionInLine) + "^";
         // Print the customized error message
         System.err.println(customizedMsg);
         System.exit(1);
@@ -156,16 +156,19 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
 
             if (ctx.expr().get(i).value() != null){
                 if ((ctx.expr().get(i).value().STRING() == null && Objects.equals(type, "string")) && !Objects.equals(type, checkType(value))) {
+                    ParserRuleContext context =  findParent(ctx);
                     int errorIndex = ctx.expr(i).getStart().getCharPositionInLine();
-                    printError(ctx, "Type error: Variable '" + name + "' can't be assigned type: " + checkType(value), errorIndex);
+                    printError(context, "TypeError: Variable '" + name + "' can't be assigned type: " + checkType(value), errorIndex);
                     System.exit(1);
                 } else if ((ctx.expr().get(i).value().STRING() != null && !Objects.equals(type, "string"))) {
+                    ParserRuleContext context =  findParent(ctx);
                     int errorIndex = ctx.expr(i).getStart().getCharPositionInLine();
-                    printError(ctx, "Type error: Variable '" + name + "' can't be assigned type: string", errorIndex);
+                    printError(context, "TypeError: Variable '" + name + "' can't be assigned type: string", errorIndex);
                     System.exit(1);
                 } else if (!Objects.equals(type, checkType(value))) {
+                    ParserRuleContext context =  findParent(ctx);
                     int errorIndex = ctx.expr(i).getStart().getCharPositionInLine();
-                    printError(ctx, "Type error: Variable '" + name + "' can't be assigned type: " + checkType(value), errorIndex);
+                    printError(context, "TypeError: Variable '" + name + "' can't be assigned type: " + checkType(value), errorIndex);
                     System.exit(1);
                 }
             }
@@ -173,8 +176,9 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
             if (currentScope.containsKey(name)) {
                 if (currentScope.containsKey(name)) {
                     if(currentScope.get(name).scopeLevel == functionDeque.size()){
+                        ParserRuleContext context =  findParent(ctx);
                         int errorIndex = ctx.NAME(i).getSymbol().getCharPositionInLine();
-                        printError(ctx, "Duplicate Error: Variable '" + name + "' has been declared", errorIndex);
+                        printError(context, "DuplicateError: Variable '" + name + "' has been declared", errorIndex);
                         System.exit(1);
                     }
                 }
@@ -226,8 +230,9 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
             String name = ctx.NAME(i).getText();
             if (currentScope.containsKey(name)) {
                 if(currentScope.get(name).scopeLevel == functionDeque.size()){
+                    ParserRuleContext context =  findParent(ctx);
                     int errorIndex = ctx.NAME(i).getSymbol().getCharPositionInLine();
-                    printError(ctx, "Duplicate Error: Variable '" + name + "' has been declared", errorIndex);
+                    printError(context, "DuplicateError: Variable '" + name + "' has been declared", errorIndex);
                     System.exit(1);
                 }
             }
@@ -263,15 +268,17 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
         if (ctx.ASSIGN() != null) {
             if (currentScope.containsKey(name)) {
                 if (!Objects.equals(currentScope.get(name).type, checkType(value))) {
+                    ParserRuleContext context =  findParent(ctx);
                     int errorIndex = ctx.ASSIGN().getSymbol().getCharPositionInLine();
-                    printError(ctx, "Type error: Variable '" + name + "' can't be assigned type: " + checkType(value), errorIndex);
+                    printError(context, "TypeError: Variable '" + name + "' can't be assigned type: " + checkType(value), errorIndex);
                     System.exit(1);
                 }
                 Variable variable = currentScope.get(name);
                 variable.setValue(value);
             } else {
+                ParserRuleContext context =  findParent(ctx);
                 int errorIndex = ctx.ASSIGN().getSymbol().getCharPositionInLine();
-                printError(ctx, "Error: Variable '" + name + "' has not been declared", errorIndex);
+                printError(context, "NameError: Variable '" + name + "' has not been declared", errorIndex);
                 System.exit(1);
             }
         }
@@ -279,9 +286,10 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
 
 
         if (ctx.ASSIGNMENT() != null) {
-            if(currentScope.get(name).value == null){
+            if(currentScope.get(name) == null || currentScope.get(name).value == null){
                 int errorIndex = ctx.ASSIGNMENT().getSymbol().getCharPositionInLine();
-                printError(ctx, "Error: Variable '" + name + "' might not have been initialized", errorIndex);
+                ParserRuleContext context =  findParent(ctx);
+                printError(context, "NameError: Variable '" + name + "' might not have been initialized", errorIndex);
                 System.exit(1);
             }
             Object baseVariable = sourceVariable(name);
@@ -303,7 +311,8 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
                     } else if (baseVariable instanceof Float && value instanceof Float) {
                         variable.setValue((float) baseVariable + (float) value);
                     } else {
-                        printError(ctx, "Error: The types of " + baseVariable + " and " + value + " vary. Cannot perform the assignment.", errorIndex);
+                        ParserRuleContext context =  findParent(ctx);
+                        printError(context, "TypeError: The types of " + baseVariable + " and " + value + " vary. Cannot perform the assignment.", errorIndex);
                         System.exit(1);
                     }
                     break;
@@ -313,7 +322,8 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
                     } else if (baseVariable instanceof Float && value instanceof Float) {
                         variable.setValue((float) baseVariable - (float) value);
                     } else {
-                        printError(ctx, "Error: The types of " + baseVariable + " and " + value + " vary. Cannot perform the assignment.", errorIndex);
+                        ParserRuleContext context =  findParent(ctx);
+                        printError(context, "TypeError: The types of " + baseVariable + " and " + value + " vary. Cannot perform the assignment.", errorIndex);
                         System.exit(1);
                     }
                     break;
@@ -323,7 +333,8 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
                     } else if (baseVariable instanceof Float && value instanceof Float) {
                         variable.setValue((float) baseVariable * (float) value);
                     } else {
-                        printError(ctx, "Error: The types of " + baseVariable + " and " + value + " vary. Cannot perform the assignment.", errorIndex);
+                        ParserRuleContext context =  findParent(ctx);
+                        printError(context, "TypeError: The types of " + baseVariable + " and " + value + " vary. Cannot perform the assignment.", errorIndex);
                         System.exit(1);
                     }
                     break;
@@ -334,11 +345,13 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
                         } else if (baseVariable instanceof Float && value instanceof Float) {
                             variable.setValue((float) baseVariable / (float) value);
                         } else {
-                            printError(ctx, "Error: The types of " + baseVariable + " and " + value + " vary. Cannot perform the assignment.", errorIndex);
+                            ParserRuleContext context =  findParent(ctx);
+                            printError(context, "TypeError: The types of " + baseVariable + " and " + value + " vary. Cannot perform the assignment.", errorIndex);
                             System.exit(1);
                         }
                     } catch (ArithmeticException e) {
-                        printError(ctx, "Error: Dividing by zero is not allowed.", errorIndex);
+                        ParserRuleContext context =  findParent(ctx);
+                        printError(context, "ZeroDivisionError: Dividing by zero is not allowed.", errorIndex);
                         System.exit(1);
                     }
                     break;
@@ -409,7 +422,7 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
                 if(!Objects.equals(checkType(result), checkType(nextFactorResult))){
                     ParserRuleContext context =  findParent(ctx);
                     int errorIndex = ctx.MUL().getSymbol().getCharPositionInLine();
-                    printError(context, "Type error: Operands are of different types: " + checkType(result) + ", " + checkType(nextFactorResult), errorIndex);
+                    printError(context, "TypeError: Operands are of different types: " + checkType(result) + ", " + checkType(nextFactorResult), errorIndex);
                     System.exit(1);
                 }
                 result = multiply(result, nextFactorResult);
@@ -418,14 +431,14 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
                     if(!Objects.equals(checkType(result), checkType(nextFactorResult))){
                         ParserRuleContext context =  findParent(ctx);
                         int errorIndex = ctx.DIV().getSymbol().getCharPositionInLine();
-                        printError(context, "Type error: Operands are of different types: " + checkType(result) + ", " + checkType(nextFactorResult), errorIndex);
+                        printError(context, "TypeError: Operands are of different types: " + checkType(result) + ", " + checkType(nextFactorResult), errorIndex);
                         System.exit(1);
                     }
                     result = divide(result, nextFactorResult);
                 }catch(Exception e){
                     ParserRuleContext context =  findParent(ctx);
                     int errorIndex = ctx.DIV().getSymbol().getCharPositionInLine();
-                    printError(context, "Error: Division by zero", errorIndex);
+                    printError(context, "ZeroDivisionError: Division by zero", errorIndex);
                     System.exit(1);
                 }
 
@@ -564,12 +577,12 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
                     try{
                         ParserRuleContext context =  findParent(ctx);
                         int errorIndex = ctx.CONDITION_OP().getSymbol().getCharPositionInLine();
-                        printError(context, "Type error: Operands are of different types: " + checkType(left) + ", " + checkType(right), errorIndex);
+                        printError(context, "TypeError: Operands are of different types: " + checkType(left) + ", " + checkType(right), errorIndex);
                         System.exit(1);
                     }catch(Exception e){
                         ParserRuleContext context =  findParent(ctx);
                         int errorIndex = ctx.CONDITION_OP().getSymbol().getCharPositionInLine();
-                        printError(context, "Type error: Operands are of different types: " + checkType(left) + ", " + checkType(right), errorIndex);
+                        printError(context, "TypeError: Operands are of different types: " + checkType(left) + ", " + checkType(right), errorIndex);
                         System.exit(1); 
                     }
                     
@@ -580,7 +593,7 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
             if(checkType(right) != "int" || checkType(right) != "float"){
                 ParserRuleContext context =  findParent(ctx);
                 int errorIndex = ctx.arithmeticOperation().getStart().getCharPositionInLine();
-                printError(context, "Error: Operands are not valid numbers", errorIndex);
+                printError(context, "TypeError: Operands are not valid numbers", errorIndex);
                 System.exit(1);
             }
             if(ctx.CONDITION_OP() == null){
@@ -621,12 +634,12 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
         if(ctx.term().factor().value() != null && ctx.term().factor().value().STRING() != null){
             ParserRuleContext context =  findParent(ctx);
             int errorIndex = ctx.term().factor().value().STRING().getSymbol().getCharPositionInLine();
-            printError(context, "Type error: String value detected in arithmetic operation: '" + right + "'", errorIndex);
+            printError(context, "TypeError: String value detected in arithmetic operation: '" + right + "'", errorIndex);
             System.exit(1);
         }else if(ctx.term().factor().value() != null && ctx.term().factor().value().NAME() != null && Objects.equals(currentScope().get(ctx.term().factor().value().NAME().getText()).type, "string")){
             ParserRuleContext context =  findParent(ctx);
             int errorIndex = ctx.term().factor().value().NAME().getSymbol().getCharPositionInLine();
-            printError(context, "Type error: String value detected in arithmetic operation: '" + right + "'", errorIndex);
+            printError(context, "TypeError: String value detected in arithmetic operation: '" + right + "'", errorIndex);
             System.exit(1);
         }
         Object left = null;
@@ -680,12 +693,12 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
                     try{
                         ParserRuleContext context =  findParent(ctx);
                         int errorIndex = ctx.CONCAT().getSymbol().getCharPositionInLine();
-                        printError(context, "Type error: Operands are of different types: " + checkType(left) + ", " + checkType(right), errorIndex);
+                        printError(context, "TypeError: Operands are of different types: " + checkType(left) + ", " + checkType(right), errorIndex);
                         System.exit(1);
                     }catch(Exception e){
                         ParserRuleContext context =  findParent(ctx);
                         int errorIndex = ctx.SUB().getSymbol().getCharPositionInLine();
-                        printError(context, "Type error: Operands are of different types: " + checkType(left) + ", " + checkType(right), errorIndex);
+                        printError(context, "TypeError: Operands are of different types: " + checkType(left) + ", " + checkType(right), errorIndex);
                         System.exit(1); 
                     }
                     
@@ -719,7 +732,9 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
             case "-":
                 return subtract(left, right);
             default:
-                System.err.println("Error: Unsupported operator: " + op);
+                int errorIndex = ctx.arithmeticOperation().getStart().getCharPositionInLine();
+                ParserRuleContext statementCtx = findParent(ctx);
+                printError(statementCtx, "TypeError: Invalid operand", errorIndex);
                 System.exit(1);
                 return null;
         }
@@ -785,7 +800,8 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
                     left = parseValue(leftVarName);
                 } catch (NumberFormatException e) {
                     int errorIndex = ctx.logicalTerm().getStart().getCharPositionInLine();
-                    printError(ctx, "Error: Invalid value for left operand", errorIndex);
+                    ParserRuleContext statementCtx = findParent(ctx);
+                    printError(statementCtx, "TypeError: Invalid value for left operand", errorIndex);
                     System.exit(1);
                 }
             }
@@ -801,7 +817,9 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
                 try {
                     right = parseValue(rightVarName);
                 } catch (NumberFormatException e) {
-                    System.err.println("Error: Invalid value for right operand");
+                    int errorIndex = ctx.logicalTerm().getStart().getCharPositionInLine();
+                    ParserRuleContext statementCtx = findParent(ctx);
+                    printError(statementCtx, "TypeError: Invalid value for right operand", errorIndex);
                     System.exit(1);
                 }
             }
@@ -893,7 +911,8 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
                 boolResult = result instanceof String ? (boolean) parseValue((String) result) : (boolean) result;
             } catch (ClassCastException e) {
                 int errorIndex = ctx.logicalFactor().getStart().getCharPositionInLine();
-                printError(ctx, "Error: Invalid boolean value", errorIndex);
+                ParserRuleContext statementCtx = findParent(ctx);
+                printError(statementCtx, "Error: Invalid boolean value", errorIndex);
                 System.exit(1);
             }
 
@@ -902,7 +921,8 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
 
             } catch (ClassCastException e) {
                 int errorIndex = ctx.logicalTerm().getStart().getCharPositionInLine();
-                printError(ctx, "Error: Invalid boolean value", errorIndex);
+                ParserRuleContext statementCtx = findParent(ctx);
+                printError(statementCtx, "Error: Invalid boolean value", errorIndex);
                 System.exit(1);
             }
 
@@ -937,7 +957,8 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
                  boolResult = result instanceof String ? (boolean) parseValue((String) result) : (boolean) result;
             } catch (ClassCastException e) {
                 int errorIndex = ctx.logicalPrimary().getStart().getCharPositionInLine();
-                printError(ctx, "Error: Invalid boolean value", errorIndex);
+                ParserRuleContext statementCtx = findParent(ctx);
+                printError(statementCtx, "Error: Invalid boolean value", errorIndex);
                 System.exit(1);
             }
 
@@ -945,7 +966,8 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
                  nextBoolResult = nextFactorResult instanceof String ? (boolean) parseValue((String) nextFactorResult) : (boolean) nextFactorResult;
             } catch (ClassCastException e) {
                 int errorIndex = ctx.logicalFactor().getStart().getCharPositionInLine();
-                printError(ctx, "Error: Invalid boolean value", errorIndex);
+                ParserRuleContext statementCtx = findParent(ctx);
+                printError(statementCtx, "Error: Invalid boolean value", errorIndex);
                 System.exit(1);
             }
 
@@ -982,7 +1004,8 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
                 return !boolResult;
             } catch (ClassCastException e) {
                 int errorIndex = ctx.logicalPrimary().getStart().getCharPositionInLine();
-                printError(ctx, "Error: Invalid boolean value", errorIndex);
+                ParserRuleContext statementCtx = findParent(ctx);
+                printError(statementCtx, "Error: Invalid boolean value", errorIndex);
                 System.exit(1);
             }
         } else if (ctx.conditionalOperation() != null) {
@@ -1012,13 +1035,14 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
             if (currentScope() != null && !currentScope().containsKey(variableName)) {
                 int errorIndex = ctx.NAME().getSymbol().getCharPositionInLine();
                 ParserRuleContext statementCtx = findParent(ctx);
-                printError(statementCtx, "Error: Variable '" + variableName + "' is not defined.", errorIndex);
+                printError(statementCtx, "NameError: Variable '" + variableName + "' is not defined.", errorIndex);
                 System.exit(1);
             }
             Object value = sourceVariable(variableName);
             if(value == null){
                 int errorIndex = ctx.NAME().getSymbol().getCharPositionInLine();
-                printError(ctx.getParent().getParent().getParent().getParent(), "Error: Variable '" + ctx.NAME() + "' might not have been initialized", errorIndex);
+                ParserRuleContext statementCtx = findParent(ctx);
+                printError(statementCtx, "NameError: Variable '" + ctx.NAME() + "' might not have been initialized", errorIndex);
                 System.exit(1);
             }
             
@@ -1126,7 +1150,7 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
 
             if (!Objects.equals(functionInfo.returnType, checkType(returnValue))) {
                 int errorIndex = ctx.expr().getStart().getCharPositionInLine();
-                printError(ctx, "Type error: Function of return type '" + functionInfo.returnType + "' can't return: " + returnValue, errorIndex);
+                printError(ctx, "TypeError: Function of return type '" + functionInfo.returnType + "' can't return: " + returnValue, errorIndex);
                 System.exit(1);
             }
 
@@ -1153,7 +1177,7 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
                 };
             } catch (Exception e2) {
                 int errorIndex = ctx.expr().getStart().getCharPositionInLine();
-                printError(ctx, "Type error: Function of return type '" + functionInfo.returnType + "' can't return: " + returnValue, errorIndex);
+                printError(ctx, "TypeError: Function of return type '" + functionInfo.returnType + "' can't return: " + returnValue, errorIndex);
                 System.exit(1);
             }
         }
@@ -1239,13 +1263,15 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
         String functionName = ctx.NAME().getText();
         try {
             if (!functionDeque.peek().containsKey(functionName)) {
+                ParserRuleContext context = findParent(ctx);
                 int errorIndex = ctx.NAME().getSymbol().getCharPositionInLine();
-                printError(ctx, "Error: Function '" + functionName + "' is not defined.", errorIndex);
+                printError(context, "NameError: Function '" + functionName + "' is not defined.", errorIndex);
                 System.exit(1);
             }
         } catch(Exception e){
+            ParserRuleContext context = findParent(ctx);
             int errorIndex = ctx.NAME().getSymbol().getCharPositionInLine();
-            printError(ctx, "Error: Function '" + functionName + "' is not defined.", errorIndex);
+            printError(context, "NameError: Function '" + functionName + "' is not defined.", errorIndex);
             System.exit(1);
         }
 
@@ -1265,21 +1291,21 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
         currentRecursionDepth++;
 
         if (currentRecursionDepth > MAX_RECURSION_DEPTH) {
-            exitProgram("Error: Stack overflow detected in function '" + functionName + "'. Recursion depth limit exceeded.");
+            exitProgram("StackOverflowError: Stack overflow detected in function '" + functionName + "'. Recursion depth limit exceeded.");
         }
 
         
         if (Objects.equals(functionInfo.returnType, "void") && !(ctx.getParent() instanceof SimpleScriptParser.StatementContext)) {
             ParserRuleContext context = findParent(ctx);
             int errorIndex = ctx.NAME().getSymbol().getCharPositionInLine();
-            printError(context, "Type error: 'void' type not expected here", errorIndex);
+            printError(context, "TypeError: 'void' type not expected here", errorIndex);
             System.exit(1);
         }
         List<SimpleScriptParser.ExprContext> arguments = ctx.expr();
 
         if (arguments.size() != functionInfo.parametersCount) {
             int errorIndex = ctx.LPAREN().getSymbol().getCharPositionInLine();
-            printError(ctx, "Error: Function '" + functionName + "' expects " + functionInfo.parametersCount + " arguments, but got " + arguments.size(), errorIndex);
+            printError(ctx, "ArgumentsCountError: Function '" + functionName + "' expects " + functionInfo.parametersCount + " arguments, but got " + arguments.size(), errorIndex);
             System.exit(1);
         }
 

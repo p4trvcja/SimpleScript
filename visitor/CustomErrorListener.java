@@ -21,19 +21,34 @@ public class CustomErrorListener extends BaseErrorListener {
         String errorLine = getErrorLine(charStream, line);
 
         // Adjust the position and line if it's a common missing semicolon error
+        if(msg.contains("mismatched input '<EOF>' expecting {'-', 'not', 'if', 'for', 'while', 'switch', TYPE, 'return', STRING, BOOLEAN, '(', 'print', 'find', 'reverse', 'add', NAME, NUMBER}")){
+            String beginning = "File '" + filePath + "'";
+            String middle = "EmptyFileError: Expecting statement, got end of file";
+            String customizedMsg =  "\n"+ beginning + "\n" + middle + "\n\n";
+            customizedMsg += "\t" + errorLine + "\n";
+//            customizedMsg += "\t" + " ".repeat(charPositionInLine) + "^";
+            // Print the customized error message
+            System.err.println(customizedMsg);
+            System.exit(1);
+        }
         if (msg.contains("missing \';\'")) {
-            if (charPositionInLine == 0) {
-                // Move the error indication to the end of the previous line
-                line--;
-                errorLine = getErrorLine(charStream, line);
-                charPositionInLine = errorLine.length();
-            }
-            if(charPositionInLine-1<0){
-                line -= 1;
-                errorLine = getErrorLine(charStream, line);
-                charPositionInLine = errorLine.length();
-            }
-            while(errorLine.length()<2 || errorLine.strip().endsWith(";")){
+//            if (charPositionInLine == 0) {
+//                // Move the error indication to the end of the previous line
+//                line--;
+//                errorLine = getErrorLine(charStream, line);
+//                charPositionInLine = errorLine.length();
+//            }
+//            if(charPositionInLine-1<0){
+//                line -= 1;
+//                errorLine = getErrorLine(charStream, line);
+//                charPositionInLine = errorLine.length();
+//            }
+//            while(errorLine.length()<2 || errorLine.strip().endsWith(";")){
+//                line -= 1;
+//                errorLine = getErrorLine(charStream, line);
+//                charPositionInLine = errorLine.length();
+//            }
+            while(errorLine.length()-charPositionInLine == errorLine.strip().length()){
                 line -= 1;
                 errorLine = getErrorLine(charStream, line);
                 charPositionInLine = errorLine.length();
@@ -43,6 +58,15 @@ public class CustomErrorListener extends BaseErrorListener {
             String customizedMsg =  "\n"+ beginning + "\n" + middle + "\n\n";
             customizedMsg += "\t" + errorLine + "\n";
             customizedMsg += "\t" + " ".repeat(charPositionInLine - 1) + "^";
+            // Print the customized error message
+            System.err.println(customizedMsg);
+            System.exit(1);
+        }else if(msg.contains("mismatched input \'/=\'") || msg.contains("mismatched input \'*=\'") || msg.contains("mismatched input \'+=\'")  || msg.contains("mismatched input \'-=\'")){
+            String beginning = "File '" + filePath + "', line "+ line + ":" + (charPositionInLine);
+            String middle = "SyntaxError: operator not expected here";
+            String customizedMsg =  "\n"+ beginning + "\n" + middle + "\n\n";
+            customizedMsg += "\t" + errorLine + "\n";
+            customizedMsg += "\t" + " ".repeat(charPositionInLine) + "^";
             // Print the customized error message
             System.err.println(customizedMsg);
             System.exit(1);
@@ -128,8 +152,8 @@ public class CustomErrorListener extends BaseErrorListener {
             // Print the customized error message
             System.err.println(customizedMsg);
             System.exit(1);
-        }else if(msg.contains("mismatched input") && msg.contains("expecting") && msg.split("\\{")[1].contains("\';\'")){
-            if(charPositionInLine-1<0){
+        }else if(msg.contains("mismatched input") && msg.contains("expecting") && msg.split("\\{").length > 2 && msg.split("\\{")[1].contains("\';\'")){
+            while(errorLine.length()-charPositionInLine == errorLine.strip().length()){
                 line -= 1;
                 errorLine = getErrorLine(charStream, line);
                 charPositionInLine = errorLine.length();
@@ -142,8 +166,8 @@ public class CustomErrorListener extends BaseErrorListener {
             // Print the customized error message
             System.err.println(customizedMsg);
             System.exit(1);
-        }else if(msg.contains("mismatched input") && msg.contains("expecting") && msg.split("\\{")[1].contains("\';\'")){
-            if(charPositionInLine-1<0){
+        }else if(msg.contains("mismatched input") && msg.endsWith("expecting \';\'")){
+            while(errorLine.length()-charPositionInLine == errorLine.strip().length()){
                 line -= 1;
                 errorLine = getErrorLine(charStream, line);
                 charPositionInLine = errorLine.length();
@@ -156,7 +180,7 @@ public class CustomErrorListener extends BaseErrorListener {
             // Print the customized error message
             System.err.println(customizedMsg);
             System.exit(1);
-        }else if(msg.contains("mismatched input") && msg.contains("expecting") && msg.split("\\{")[1].contains("\'=\'")){
+        }else if(msg.contains("mismatched input") && msg.contains("expecting") && msg.split("\\{").length > 2 && msg.split("\\{")[1].contains("\'=\'")){
             if(charPositionInLine-1<0){
                 line -= 1;
                 errorLine = getErrorLine(charStream, line);
@@ -193,8 +217,8 @@ public class CustomErrorListener extends BaseErrorListener {
             // Print the customized error message
             System.err.println(customizedMsg);
             System.exit(1);
-        }else if(msg.contains("extraneous input") && msg.contains("expecting")){
-            if(charPositionInLine-1<0){
+        }else if(msg.contains("extraneous input") && msg.endsWith("expecting \';\'")){
+            while(charPositionInLine-1<0){
                 line -= 1;
                 errorLine = getErrorLine(charStream, line);
                 charPositionInLine = errorLine.length();
@@ -204,6 +228,34 @@ public class CustomErrorListener extends BaseErrorListener {
             String customizedMsg =  "\n"+ beginning + "\n" + middle + "\n\n";
             customizedMsg += "\t" + errorLine + "\n";
             customizedMsg += "\t" + " ".repeat(charPositionInLine - 1) + "^";
+            // Print the customized error message
+            System.err.println(customizedMsg);
+            System.exit(1);
+        }else if(msg.contains("extraneous input") && msg.contains("expecting") && msg.split("\\{").length>1 && msg.split("\\{")[1].split(" ").length > 1){
+            if(charPositionInLine-1<0){
+                line -= 1;
+                errorLine = getErrorLine(charStream, line);
+                charPositionInLine = errorLine.length();
+            }
+            String beginning = "File '" + filePath + "', line "+ line + ":" + (charPositionInLine);
+            String middle = "SyntaxError: " + "Extraneous input: '" + msg.split(" ")[2] + "', expected '" + msg.split("\\{")[1].split(" ")[0] + "'";
+            String customizedMsg =  "\n"+ beginning + "\n" + middle + "\n\n";
+            customizedMsg += "\t" + errorLine + "\n";
+            customizedMsg += "\t" + " ".repeat(charPositionInLine - 1) + "^";
+            // Print the customized error message
+            System.err.println(customizedMsg);
+            System.exit(1);
+        }else if(msg.contains("extraneous input") && msg.contains("expecting")){
+            if(charPositionInLine-1<0){
+                line -= 1;
+                errorLine = getErrorLine(charStream, line);
+                charPositionInLine = errorLine.length();
+            }
+            String beginning = "File '" + filePath + "', line "+ line + ":" + (charPositionInLine);
+            String middle = "SyntaxError: " + "Extraneous input: " + msg.split(" ")[2] + " expecting " + msg.split(" ")[4];
+            String customizedMsg =  "\n"+ beginning + "\n" + middle + "\n\n";
+            customizedMsg += "\t" + errorLine + "\n";
+            customizedMsg += "\t" + " ".repeat(charPositionInLine) + "^";
             // Print the customized error message
             System.err.println(customizedMsg);
             System.exit(1);

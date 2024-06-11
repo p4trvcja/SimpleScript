@@ -1,3 +1,8 @@
 
+int x(string x){
+    print(x);
+    return(12);
+};
 
-print(false != 10);
+
+x(12);

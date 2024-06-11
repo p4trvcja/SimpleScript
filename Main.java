@@ -19,9 +19,9 @@ public class Main{
 //             System.err.println("Usage: java SimpleScriptInterpreter <input_file>");
 //             System.exit(1);
 //         }
-
+//
 //         String inputFilePath = args[0];
-       String inputFilePath = "script_if_else.ss";
+        String inputFilePath = "script_if_else.ss";
         String code = readFile(inputFilePath);
 
         CodePointCharStream input = CharStreams.fromString(code);
