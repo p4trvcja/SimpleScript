@@ -1,9 +1,6 @@
 package visitor;
 import java.util.*;
-import java.util.function.Function;
 import java.util.stream.Collectors;
-
-import javax.swing.text.html.HTMLEditorKit.Parser;
 
 import org.antlr.v4.runtime.ParserRuleContext;
 
@@ -22,6 +19,14 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
     private String filePath = "script.ss";
 
     public InterpretVisitor(String filePath) {
+        super();
+        this.filePath = filePath;
+        scopeStack.push(new HashMap<>());
+        functionDeque.push(new HashMap<>());
+        functionStack.push(null);
+    }
+
+    public InterpretVisitor() {
         super();
         this.filePath = filePath;
         scopeStack.push(new HashMap<>());
@@ -160,11 +165,13 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
                     int errorIndex = ctx.expr(i).getStart().getCharPositionInLine();
                     printError(context, "TypeError: Variable '" + name + "' can't be assigned type: " + checkType(value), errorIndex);
                     System.exit(1);
-                } else if ((ctx.expr().get(i).value().STRING() != null && !Objects.equals(type, "string"))) {
-                    ParserRuleContext context =  findParent(ctx);
-                    int errorIndex = ctx.expr(i).getStart().getCharPositionInLine();
-                    printError(context, "TypeError: Variable '" + name + "' can't be assigned type: string", errorIndex);
-                    System.exit(1);
+                } else if ((ctx.expr().get(i).value().STRING() != null)) {
+                    if (!Objects.equals(type, "string")) {
+                        ParserRuleContext context =  findParent(ctx);
+                        int errorIndex = ctx.expr(i).getStart().getCharPositionInLine();
+                        printError(context, "TypeError: Variable '" + name + "' can't be assigned type: string", errorIndex);
+                        System.exit(1);
+                    }
                 } else if (!Objects.equals(type, checkType(value))) {
                     ParserRuleContext context =  findParent(ctx);
                     int errorIndex = ctx.expr(i).getStart().getCharPositionInLine();
@@ -267,7 +274,15 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
 
         if (ctx.ASSIGN() != null) {
             if (currentScope.containsKey(name)) {
-                if (!Objects.equals(currentScope.get(name).type, checkType(value))) {
+
+                if (ctx.expr().value().STRING() != null || Objects.equals(currentScope.get(name).type, "string")) {
+                    if (!Objects.equals(currentScope.get(name).type, "string")) {
+                        ParserRuleContext context =  findParent(ctx);
+                        int errorIndex = ctx.ASSIGN().getSymbol().getCharPositionInLine();
+                        printError(context, "TypeError: Variable '" + name + "' can't be assigned type: " + checkType(value), errorIndex);
+                        System.exit(1);
+                    }
+                } else if (!Objects.equals(currentScope.get(name).type, checkType(value))) {
                     ParserRuleContext context =  findParent(ctx);
                     int errorIndex = ctx.ASSIGN().getSymbol().getCharPositionInLine();
                     printError(context, "TypeError: Variable '" + name + "' can't be assigned type: " + checkType(value), errorIndex);
@@ -1148,6 +1163,15 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
 
             returnValue = visit(ctx.expr());
 
+            if (ctx.expr().value() != null && ctx.expr().value().STRING() != null) {
+                if (!Objects.equals(functionInfo.returnType, "string")) {
+                    int errorIndex = ctx.expr().getStart().getCharPositionInLine();
+                    printError(ctx, "TypeError: Function of return type '" + functionInfo.returnType + "' can't return: \"" + returnValue + "\"", errorIndex);
+                    System.exit(1);
+                }
+            }
+
+
             if (!Objects.equals(functionInfo.returnType, checkType(returnValue))) {
                 int errorIndex = ctx.expr().getStart().getCharPositionInLine();
                 printError(ctx, "TypeError: Function of return type '" + functionInfo.returnType + "' can't return: " + returnValue, errorIndex);
@@ -1327,12 +1351,18 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
         List<String> parameterNames = new ArrayList<>(functionInfo.parameters.keySet());
         for (int i = 0; i < arguments.size(); i++) {
             String parameterName = parameterNames.get(i);
-            if(!Objects.equals(functionInfo.parameters.get(parameterName).getType(), checkType(argumentValues.get(i)))){
-                ParserRuleContext context =  findParent(ctx);
+            if (arguments.get(i).value().STRING() != null) {
+                if (!Objects.equals(functionInfo.parameters.get(parameterName).getType(), "string")){
+                    int errorIndex = ctx.LPAREN().getSymbol().getCharPositionInLine();
+                    printError(ctx, "Error: Type mismatch in argument: " + parameterName, errorIndex);
+                    System.exit(1);
+                }
+            } else if (!Objects.equals(functionInfo.parameters.get(parameterName).getType(), checkType(argumentValues.get(i)))){
                 int errorIndex = ctx.LPAREN().getSymbol().getCharPositionInLine();
-                printError(context, "TypeError: Type mismatch in argument: " + parameterName, errorIndex+1);
+                printError(ctx, "Error: Type mismatch in argument: " + parameterName, errorIndex);
                 System.exit(1);
             }
+
             Variable parameter = functionInfo.parameters.get(parameterName);
             localVariables.put(parameterName, new Variable(parameter.getType(), argumentValues.get(i), scopeStack.size()+1));
         }
