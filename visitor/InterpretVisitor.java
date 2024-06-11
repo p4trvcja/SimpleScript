@@ -577,9 +577,20 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
             }
 
         } catch (NumberFormatException e) {
-            int errorIndex = ctx.CONDITION_OP().getSymbol().getCharPositionInLine();
-            printError(ctx, "Error: Operands are not valid numbers", errorIndex);
-            System.exit(1);
+            if(checkType(right) != "int" || checkType(right) != "float"){
+                ParserRuleContext context =  findParent(ctx);
+                int errorIndex = ctx.arithmeticOperation().getStart().getCharPositionInLine();
+                printError(context, "Error: Operands are not valid numbers", errorIndex);
+                System.exit(1);
+            }
+            if(ctx.CONDITION_OP() == null){
+                ParserRuleContext context =  findParent(ctx);
+                int errorIndex = ctx.arithmeticOperation().getStart().getCharPositionInLine();
+                printError(context, "MissingOperatorError: Missing operator in logical operation", errorIndex);
+                System.exit(1);
+            }
+            
+            
         }
 
         if (op == null) {
@@ -682,9 +693,18 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
             }
 
         } catch (NumberFormatException e) {
-            int errorIndex = ctx.arithmeticOperation().getStart().getCharPositionInLine();
-            printError(ctx, "Error: Operands are not valid numbers.", errorIndex);
-            System.exit(1);
+            try{
+                if((((Boolean) right).booleanValue() == true || ((Boolean) right).booleanValue() == false) && left == null){
+                    return right;
+                }
+            }catch(Exception b){
+                ParserRuleContext context =  findParent(ctx);
+                int errorIndex = ctx.arithmeticOperation().getStart().getCharPositionInLine();
+                printError(context, "TypeError: Operands are not valid numbers.", errorIndex);
+                System.exit(1);
+            }
+            
+            
         }
 
         if (op == null) {
@@ -732,9 +752,9 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
     // Helper method to perform subtraction
     private Object subtract(Object left, Object right) {
         if (left instanceof Integer && right instanceof Integer) {
-            return (int) left - (int) right;
+            return ((Integer) left).intValue()-((Integer) right).intValue();
         } else if (left instanceof Float && right instanceof Float) {
-            return (float) left - (float) right;
+            return ((Float) left).floatValue()-((Float) right).floatValue();
         } else {
             System.err.println("Error: Unsupported operand types for subtraction");
             System.exit(1);
@@ -1282,8 +1302,9 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
         for (int i = 0; i < arguments.size(); i++) {
             String parameterName = parameterNames.get(i);
             if(!Objects.equals(functionInfo.parameters.get(parameterName).getType(), checkType(argumentValues.get(i)))){
+                ParserRuleContext context =  findParent(ctx);
                 int errorIndex = ctx.LPAREN().getSymbol().getCharPositionInLine();
-                printError(ctx, "Error: Type mismatch in argument: " + parameterName, errorIndex);
+                printError(context, "TypeError: Type mismatch in argument: " + parameterName, errorIndex+1);
                 System.exit(1);
             }
             Variable parameter = functionInfo.parameters.get(parameterName);
