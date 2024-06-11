@@ -172,6 +172,19 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
                         printError(context, "TypeError: Variable '" + name + "' can't be assigned type: string", errorIndex);
                         System.exit(1);
                     }
+                } else if (ctx.expr().get(i).value() != null && ctx.expr().get(i).value().NAME() != null) {
+                    Object var = ctx.expr().get(i).value().NAME().getText();
+
+                    for (Map<String, Variable> scope : scopeStack) {
+                        if (scope.containsKey(var)) {
+                            Variable variable = scope.get(var);
+                            if (variable.type.equals("string") && !Objects.equals(type, "string")) {
+                                int errorIndex = ctx.expr().get(i).getStart().getCharPositionInLine();
+                                printError(ctx, "TypeError: Variable '" + name + "' can't be assigned type: string", errorIndex);
+                                System.exit(1);
+                            }
+                        }
+                    }
                 } else if (!Objects.equals(type, checkType(value))) {
                     ParserRuleContext context =  findParent(ctx);
                     int errorIndex = ctx.expr(i).getStart().getCharPositionInLine();
@@ -204,6 +217,7 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
         }else if(value instanceof Float){
             return "float";
         }else if(value instanceof Boolean){
+            System.out.println("here");
             return "bool";
         }
 
@@ -275,12 +289,25 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
         if (ctx.ASSIGN() != null) {
             if (currentScope.containsKey(name)) {
 
-                if (ctx.expr().value().STRING() != null || Objects.equals(currentScope.get(name).type, "string")) {
+                if (ctx.expr().value().STRING() != null) {
                     if (!Objects.equals(currentScope.get(name).type, "string")) {
                         ParserRuleContext context =  findParent(ctx);
                         int errorIndex = ctx.ASSIGN().getSymbol().getCharPositionInLine();
                         printError(context, "TypeError: Variable '" + name + "' can't be assigned type: " + checkType(value), errorIndex);
                         System.exit(1);
+                    }
+                } else if (ctx.expr().value() != null && ctx.expr().value().NAME() != null) {
+                    Object var = ctx.expr().value().NAME().getText();
+
+                    for (Map<String, Variable> scope : scopeStack) {
+                        if (scope.containsKey(var)) {
+                            Variable variable = scope.get(var);
+                            if (variable.type.equals("string") && !Objects.equals(currentScope.get(name).type, "string")) {
+                                int errorIndex = ctx.expr().getStart().getCharPositionInLine();
+                                printError(ctx, "TypeError: Variable '" + name + "' can't be assigned type: string", errorIndex);
+                                System.exit(1);
+                            }
+                        }
                     }
                 } else if (!Objects.equals(currentScope.get(name).type, checkType(value))) {
                     ParserRuleContext context =  findParent(ctx);
@@ -1168,6 +1195,21 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
                     int errorIndex = ctx.expr().getStart().getCharPositionInLine();
                     printError(ctx, "TypeError: Function of return type '" + functionInfo.returnType + "' can't return: \"" + returnValue + "\"", errorIndex);
                     System.exit(1);
+                }
+            }
+
+            if (ctx.expr().value() != null && ctx.expr().value().NAME() != null) {
+                Object name = ctx.expr().value().NAME().getText();
+
+                for (Map<String, Variable> scope : scopeStack) {
+                    if (scope.containsKey(name)) {
+                        Variable variable = scope.get(name);
+                        if (variable.type.equals("string") && !Objects.equals(functionInfo.returnType, "string")) {
+                            int errorIndex = ctx.expr().getStart().getCharPositionInLine();
+                            printError(ctx, "TypeError: Function of return type '" + functionInfo.returnType + "' can't return: \"" + returnValue + "\"", errorIndex);
+                            System.exit(1);
+                        }
+                    }
                 }
             }
 
