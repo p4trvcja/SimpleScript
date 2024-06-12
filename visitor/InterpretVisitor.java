@@ -194,6 +194,26 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
                     printError(context, "TypeError: Variable '" + name + "' can't be assigned type: " + checkType(value), errorIndex);
                     System.exit(1);
                 }
+            } else if (ctx.expr().get(i).functionInvocation() != null) {
+                String val = ctx.expr().get(i).functionInvocation().NAME().getText();
+                for (var function : functionDeque) {
+                    if (function.containsKey(val)) {
+                        FunctionInfo functionInfo = function.get(val);
+                        if (!Objects.equals(functionInfo.returnType, type)) {
+                            ParserRuleContext context =  findParent(ctx);
+                            int errorIndex = ctx.expr(i).getStart().getCharPositionInLine();
+                            printError(context, "TypeError: Variable '" + name + "' can't be assigned type: " + checkType(value), errorIndex);
+                            System.exit(1);
+                        }
+                    }
+
+                }
+            } else if (ctx.expr().get(i).arithmeticOperation() != null || ctx.expr().get(i).conditionalOperation() != null || ctx.expr().get(i).singleValueOperation() != null) {
+                if (Objects.equals("string", type)) {
+                    int errorIndex = ctx.getStart().getCharPositionInLine();
+                    printError(ctx, "TypeError: Variable '" + name + "' can't be assigned type: " + checkType(value), errorIndex);
+                    System.exit(1);
+                }
             }
 
             if (currentScope.containsKey(name)) {
@@ -310,6 +330,27 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
                                 System.exit(1);
                             }
                         }
+                    }
+                } else if (ctx.expr().functionInvocation() != null) {
+                    String val = ctx.expr().functionInvocation().NAME().getText();
+                    for (var function : functionDeque) {
+                        if (function.containsKey(val)) {
+                            FunctionInfo functionInfo = function.get(val);
+                            if (!Objects.equals(functionInfo.returnType, currentScope.get(name).type)) {
+                                ParserRuleContext context =  findParent(ctx);
+                                int errorIndex = ctx.getStart().getCharPositionInLine();
+                                printError(context, "TypeError: Variable '" + name + "' can't be assigned type: " + checkType(value), errorIndex);
+                                System.exit(1);
+                            }
+                        }
+
+                    }
+                } else if (ctx.expr().arithmeticOperation() != null || ctx.expr().conditionalOperation() != null || ctx.expr().singleValueOperation() != null) {
+                    if (Objects.equals("string", currentScope.get(name).type)) {
+                        ParserRuleContext context =  findParent(ctx);
+                        int errorIndex = ctx.getStart().getCharPositionInLine();
+                        printError(context, "TypeError: Variable '" + name + "' can't be assigned type: " + checkType(value), errorIndex);
+                        System.exit(1);
                     }
                 } else if (!Objects.equals(currentScope.get(name).type, checkType(value))) {
                     ParserRuleContext context =  findParent(ctx);
@@ -1202,9 +1243,7 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
                     printError(ctx, "TypeError: Function of return type '" + functionInfo.returnType + "' can't return: \"" + returnValue + "\"", errorIndex);
                     System.exit(1);
                 }
-            }
-
-            if (ctx.expr().value() != null && ctx.expr().value().NAME() != null) {
+            } else if (ctx.expr().value() != null && ctx.expr().value().NAME() != null) {
                 Object name = ctx.expr().value().NAME().getText();
 
                 for (Map<String, Variable> scope : scopeStack) {
@@ -1217,10 +1256,26 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
                         }
                     }
                 }
-            }
-
-
-            if (!Objects.equals(functionInfo.returnType, checkType(returnValue))) {
+            } else if (ctx.expr().functionInvocation() != null) {
+                String val = ctx.expr().functionInvocation().NAME().getText();
+                for (var function : functionDeque) {
+                    if (function.containsKey(val)) {
+                        if (!Objects.equals(functionInfo.returnType, "string")) {
+                            ParserRuleContext context = findParent(ctx);
+                            int errorIndex = ctx.getStart().getCharPositionInLine();
+                            printError(context, "TypeError: Function of return type '" + functionInfo.returnType + "' can't return: " + returnValue, errorIndex);
+                            System.exit(1);
+                        }
+                    }
+                }
+            } else if (ctx.expr().arithmeticOperation() != null || ctx.expr().conditionalOperation() != null || ctx.expr().singleValueOperation() != null) {
+                if (Objects.equals(functionInfo.returnType, "string")) {
+                    ParserRuleContext context = findParent(ctx);
+                    int errorIndex = ctx.getStart().getCharPositionInLine();
+                    printError(context, "TypeError: Function of return type '" + functionInfo.returnType + "' can't return: " + returnValue, errorIndex);
+                    System.exit(1);
+                }
+            } else if (!Objects.equals(functionInfo.returnType, checkType(returnValue))) {
                 int errorIndex = ctx.expr().getStart().getCharPositionInLine();
                 printError(ctx, "TypeError: Function of return type '" + functionInfo.returnType + "' can't return: " + returnValue, errorIndex);
                 System.exit(1);
