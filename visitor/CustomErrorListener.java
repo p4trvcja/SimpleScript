@@ -15,7 +15,24 @@ public class CustomErrorListener extends BaseErrorListener {
                             int line, int charPositionInLine, String msg, RecognitionException e) {
 
         // Retrieve the CharStream from the recognizer's token source
-        CharStream charStream = ((TokenStream) recognizer.getInputStream()).getTokenSource().getInputStream();
+        CharStream charStream;
+        try{
+            charStream = ((TokenStream) recognizer.getInputStream()).getTokenSource().getInputStream();
+        }
+        catch(Exception b){
+            String beginning = "File '" + filePath + "'";
+            String middle = "SyntaxError: \' \" \' not epected here";
+            String customizedMsg =  "\n"+ beginning + "\n" + middle + "\n\n";
+            if(line -1 > 0){
+                line -=1;
+            }
+            customizedMsg += "\t" + recognizer.getInputStream().toString().split("\n")[line] + "\n";
+            customizedMsg += "\t" + " ".repeat(charPositionInLine) + "^";
+            // Print the customized error message
+            System.err.println(customizedMsg);
+            System.exit(1);
+        }
+        charStream = ((TokenStream) recognizer.getInputStream()).getTokenSource().getInputStream();
 
         // Extract the specific line of the source code where the error occurred
         String errorLine = getErrorLine(charStream, line);

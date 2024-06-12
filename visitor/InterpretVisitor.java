@@ -1105,6 +1105,15 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
     public Object visitSingleValueOperation(SimpleScriptParser.SingleValueOperationContext ctx) {
         String variableName = ctx.NAME().getText();
         String operation = ctx.SINGLE_VAL_OP().getText();
+
+        Map<String, Variable> localVariables = currentScope();
+
+        if(!localVariables.containsKey(variableName)){
+            ParserRuleContext context =  findParent(ctx);
+            int errorIndex = ctx.SINGLE_VAL_OP().getSymbol().getCharPositionInLine();
+            printError(context, "NameError: Variable '" + variableName + "' has not been declared", errorIndex);
+            System.exit(1);
+        }
     
         // Get the current value of the variable
         Object value = sourceVariable(variableName);
@@ -1135,15 +1144,10 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
         }
     
         // Update the variable value
-        Map<String, Variable> localVariables = currentScope();
-        if (localVariables.containsKey(variableName)) {
-            Variable variable = new Variable(localVariables.get(variableName).getType(), value, scopeStack.size());
-            localVariables.put(variableName, variable);
-        } else {
-            int errorIndex = ctx.NAME().getSymbol().getCharPositionInLine();
-            printError(ctx, "Error: Variable '" + variableName + "' has not been declared", errorIndex);
-            System.exit(1);
-        }
+        
+        Map<String, Variable> currentScope = currentScope();
+        Variable variable = currentScope.get(variableName);
+        variable.setValue(value);
     
         return null;
     }
