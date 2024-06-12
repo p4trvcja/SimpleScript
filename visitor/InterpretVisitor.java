@@ -6,6 +6,7 @@ import java.util.stream.Collectors;
 import javax.swing.text.html.HTMLEditorKit.Parser;
 
 import org.antlr.v4.runtime.ParserRuleContext;
+import org.antlr.v4.runtime.tree.ParseTree;
 
 public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
     private int currentInstruction = 0;
@@ -165,7 +166,7 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
                     int errorIndex = ctx.expr(i).getStart().getCharPositionInLine();
                     printError(context, "TypeError: Variable '" + name + "' can't be assigned type: string", errorIndex);
                     System.exit(1);
-                } else if (!Objects.equals(type, checkType(value))) {
+                } else if (!Objects.equals(type, checkType(value)) && !(ctx.expr().get(i).value().STRING() != null && Objects.equals(type, "string"))) {
                     ParserRuleContext context =  findParent(ctx);
                     int errorIndex = ctx.expr(i).getStart().getCharPositionInLine();
                     printError(context, "TypeError: Variable '" + name + "' can't be assigned type: " + checkType(value), errorIndex);
@@ -267,14 +268,29 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
 
         if (ctx.ASSIGN() != null) {
             if (currentScope.containsKey(name)) {
-                if (!Objects.equals(currentScope.get(name).type, checkType(value))) {
-                    ParserRuleContext context =  findParent(ctx);
-                    int errorIndex = ctx.ASSIGN().getSymbol().getCharPositionInLine();
-                    printError(context, "TypeError: Variable '" + name + "' can't be assigned type: " + checkType(value), errorIndex);
-                    System.exit(1);
-                }
+
                 Variable variable = currentScope.get(name);
                 variable.setValue(value);
+                if (ctx.expr().value() != null) {
+                    if ((ctx.expr().value().STRING() != null && !Objects.equals(variable.type, "string"))) {
+                        ParserRuleContext context = findParent(ctx);
+                        int errorIndex = ctx.expr().getStart().getCharPositionInLine();
+                        printError(context, "TypeError: Variable '" + name + "' can't be assigned type: string", errorIndex);
+                        System.exit(1);
+                    } else if (!Objects.equals(currentScope.get(name).type, checkType(value)) && ctx.expr().value().NAME() != null && currentScope.containsKey(ctx.expr().value().NAME().getText()) && !Objects.equals(currentScope.get(ctx.expr().value().NAME().getText()).type, "string")) {
+                        ParserRuleContext context =  findParent(ctx);
+                        int errorIndex = ctx.ASSIGN().getSymbol().getCharPositionInLine();
+                        printError(context, "TypeError: Variable '" + name + "' can't be assigned type: " + checkType(value), errorIndex);
+                        System.exit(1);
+                    } else if(!(ctx.expr().value().NAME() != null && currentScope.containsKey(ctx.expr().value().NAME().getText()) && Objects.equals(currentScope.get(ctx.expr().value().NAME().getText()).type, "string")) && !Objects.equals(currentScope.get(name).type, checkType(value)) && ctx.expr().value().STRING() == null){
+                        ParserRuleContext context =  findParent(ctx);
+                        int errorIndex = ctx.ASSIGN().getSymbol().getCharPositionInLine();
+                        printError(context, "TypeError: Variable '" + name + "' can't be assigned type: " + checkType(value), errorIndex);
+                        System.exit(1);
+                    }
+                }
+
+
             } else {
                 ParserRuleContext context =  findParent(ctx);
                 int errorIndex = ctx.ASSIGN().getSymbol().getCharPositionInLine();
@@ -1610,54 +1626,101 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
 
     @Override
     public Object visitArrayDefinition(SimpleScriptParser.ArrayDefinitionContext ctx) {
-        String type = ctx.arrayType().TYPE().getText() + "[" + "]";
+        String type = ctx.arrayType().TYPE().getText();
+        int dimensions = ctx.arrayType().LBRACK().size();
         String name = ctx.NAME().getText();
-        Object arguments = new ArrayList<>();
-        Map<String, Variable> localVariables = currentScope();
+        Object array = visit(ctx.nestedArray());
 
-        if (ctx.arguments() != null) {
-            arguments = visit(ctx.arguments());
+        if (!validateArrayDimensions(array, dimensions)) {
+            System.err.println("Error: Array '" + name + "' dimensions do not match the declared type");
+            System.exit(1);
         }
 
-        Variable variable = new Variable(type, arguments, scopeStack.size());
-
+        Variable variable = new Variable(type + "[]".repeat(dimensions), array, scopeStack.size());
+        Map<String, Variable> localVariables = currentScope();
         localVariables.put(name, variable);
 
         return null;
     }
 
+    private boolean validateArrayDimensions(Object array, int expectedDimensions) {
+        if (expectedDimensions == 0) {
+            return !(array instanceof List);
+        }
+
+        if (!(array instanceof List)) {
+            return false;
+        }
+
+        List<?> list = (List<?>) array;
+        for (Object element : list) {
+            if (!validateArrayDimensions(element, expectedDimensions - 1)) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    @Override
+    public Object visitNestedArray(SimpleScriptParser.NestedArrayContext ctx) {
+        List<Object> array = new ArrayList<>();
+
+        for (ParseTree child : ctx.children) {
+            if (child instanceof SimpleScriptParser.NestedArrayContext) {
+                array.add(visit(child));
+            } else if (child instanceof SimpleScriptParser.ExprContext) {
+                array.add(visit(child));
+            }
+        }
+
+        return array;
+    }
+
     @Override
     public Object visitArrayAccess(SimpleScriptParser.ArrayAccessContext ctx) {
         String arrayName = ctx.NAME().getText();
-        Object index = visit(ctx.expr());
+        List<Object> indices = new ArrayList<>();
 
-        if (index instanceof String)
+        for (SimpleScriptParser.ExprContext exprCtx : ctx.expr()) {
+            Object index = visit(exprCtx);
+            if (index instanceof String) {
                 index = parseValue((String) index);
-
-        if (index instanceof Integer && index instanceof Integer) {
-            int intIndex = (int) index;
-            Map<String, Variable> localVariables = currentScope();
-            if (!localVariables.containsKey(arrayName)) {
-                System.err.println("Error: Array '" + arrayName + "' has not been declared");
-                System.exit(1);
             }
+            indices.add(index);
+        }
 
-            Variable arrayVariable = localVariables.get(arrayName);
-            if (!(arrayVariable.getValue() instanceof List)) {
+        if (indices.stream().anyMatch(index -> !(index instanceof Integer))) {
+            System.err.println("Error: Array indices must be integers");
+            System.exit(1);
+        }
+
+        Map<String, Variable> localVariables = currentScope();
+        if (!localVariables.containsKey(arrayName)) {
+            System.err.println("Error: Array '" + arrayName + "' has not been declared");
+            System.exit(1);
+        }
+
+        Variable arrayVariable = localVariables.get(arrayName);
+        Object value = arrayVariable.getValue();
+
+        for (Object index : indices) {
+            int intIndex = (int) index;
+            if (!(value instanceof List)) {
                 System.err.println("Error: Variable '" + arrayName + "' is not an array");
                 System.exit(1);
             }
 
-            List<?> array = (List<?>) arrayVariable.getValue();
+            List<?> array = (List<?>) value;
             if (intIndex < 0 || intIndex >= array.size()) {
                 System.err.println("Error: Array index out of bounds");
                 System.exit(1);
             }
 
-            return array.get(intIndex);
+            value = array.get(intIndex);
         }
 
-        return null;
+        return value;
     }
 
     @Override

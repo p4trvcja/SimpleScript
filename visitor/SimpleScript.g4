@@ -43,15 +43,18 @@ parameters: parameter (COMMA parameter)*;
 arguments: expr (COMMA expr)*; 
 
 // arrays
-arrayType: TYPE LBRACK RBRACK;
+arrayType: TYPE (LBRACK RBRACK)+; // Allows for multidimensional arrays
 
-arrayDefinition: arrayType NAME ASSIGN LBRACK arguments? RBRACK SEMICOLON; 
+arrayDefinition: arrayType NAME ASSIGN nestedArray SEMICOLON;
 
-arrayDeclaration: arrayType NAME SEMICOLON; 
+arrayDeclaration: arrayType NAME SEMICOLON;
 
-arrayAssignment: NAME ASSIGN LBRACK arguments? RBRACK SEMICOLON; 
+arrayAssignment: NAME ASSIGN nestedArray SEMICOLON;
 
-arrayAccess: NAME LBRACK expr RBRACK;
+arrayAccess: NAME LBRACK expr (RBRACK LBRACK expr)* RBRACK;
+
+nestedArray: LBRACK (nestedArray | expr) (COMMA (nestedArray | expr))* RBRACK;
+
 
 // printing   
 printStatement: PRINT LPAREN expr? RPAREN SEMICOLON;

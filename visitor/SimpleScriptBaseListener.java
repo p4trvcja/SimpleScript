@@ -1,4 +1,4 @@
-// Generated from visitor/SimpleScript.g4 by ANTLR 4.13.1
+// Generated from SimpleScript.g4 by ANTLR 4.13.1
 package visitor;
 
 import org.antlr.v4.runtime.ParserRuleContext;
@@ -204,6 +204,18 @@ public class SimpleScriptBaseListener implements SimpleScriptListener {
 	 * <p>The default implementation does nothing.</p>
 	 */
 	@Override public void exitArrayAccess(SimpleScriptParser.ArrayAccessContext ctx) { }
+	/**
+	 * {@inheritDoc}
+	 *
+	 * <p>The default implementation does nothing.</p>
+	 */
+	@Override public void enterNestedArray(SimpleScriptParser.NestedArrayContext ctx) { }
+	/**
+	 * {@inheritDoc}
+	 *
+	 * <p>The default implementation does nothing.</p>
+	 */
+	@Override public void exitNestedArray(SimpleScriptParser.NestedArrayContext ctx) { }
 	/**
 	 * {@inheritDoc}
 	 *

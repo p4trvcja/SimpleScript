@@ -1,4 +1,4 @@
-// Generated from visitor/SimpleScript.g4 by ANTLR 4.13.1
+// Generated from SimpleScript.g4 by ANTLR 4.13.1
 package visitor;
 import org.antlr.v4.runtime.tree.ParseTreeListener;
 
@@ -167,6 +167,16 @@ public interface SimpleScriptListener extends ParseTreeListener {
 	 * @param ctx the parse tree
 	 */
 	void exitArrayAccess(SimpleScriptParser.ArrayAccessContext ctx);
+	/**
+	 * Enter a parse tree produced by {@link SimpleScriptParser#nestedArray}.
+	 * @param ctx the parse tree
+	 */
+	void enterNestedArray(SimpleScriptParser.NestedArrayContext ctx);
+	/**
+	 * Exit a parse tree produced by {@link SimpleScriptParser#nestedArray}.
+	 * @param ctx the parse tree
+	 */
+	void exitNestedArray(SimpleScriptParser.NestedArrayContext ctx);
 	/**
 	 * Enter a parse tree produced by {@link SimpleScriptParser#printStatement}.
 	 * @param ctx the parse tree

@@ -1,4 +1,4 @@
-// Generated from visitor/SimpleScript.g4 by ANTLR 4.13.1
+// Generated from SimpleScript.g4 by ANTLR 4.13.1
 package visitor;
 import org.antlr.v4.runtime.tree.AbstractParseTreeVisitor;
 
@@ -124,6 +124,13 @@ public class SimpleScriptBaseVisitor<T> extends AbstractParseTreeVisitor<T> impl
 	 * {@link #visitChildren} on {@code ctx}.</p>
 	 */
 	@Override public T visitArrayAccess(SimpleScriptParser.ArrayAccessContext ctx) { return visitChildren(ctx); }
+	/**
+	 * {@inheritDoc}
+	 *
+	 * <p>The default implementation returns the result of calling
+	 * {@link #visitChildren} on {@code ctx}.</p>
+	 */
+	@Override public T visitNestedArray(SimpleScriptParser.NestedArrayContext ctx) { return visitChildren(ctx); }
 	/**
 	 * {@inheritDoc}
 	 *

@@ -1,8 +1,4 @@
 
-int x(string x){
-    print(x);
-    return(12);
-};
+int [][] x = [[12, 123], [[123, 123]];
 
-
-x(12);
+print(x[0][1]);
