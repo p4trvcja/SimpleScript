@@ -3379,7 +3379,9 @@ public class SimpleScriptParser extends Parser {
 	public static class SwitchConditionContext extends ParserRuleContext {
 		public TerminalNode SWITCH() { return getToken(SimpleScriptParser.SWITCH, 0); }
 		public TerminalNode LPAREN() { return getToken(SimpleScriptParser.LPAREN, 0); }
-		public TerminalNode NAME() { return getToken(SimpleScriptParser.NAME, 0); }
+		public ExprContext expr() {
+			return getRuleContext(ExprContext.class,0);
+		}
 		public TerminalNode RPAREN() { return getToken(SimpleScriptParser.RPAREN, 0); }
 		public TerminalNode LBRACE() { return getToken(SimpleScriptParser.LBRACE, 0); }
 		public TerminalNode RBRACE() { return getToken(SimpleScriptParser.RBRACE, 0); }
@@ -3423,7 +3425,7 @@ public class SimpleScriptParser extends Parser {
 			setState(480);
 			match(LPAREN);
 			setState(481);
-			match(NAME);
+			expr();
 			setState(482);
 			match(RPAREN);
 			setState(483);
@@ -4102,7 +4104,7 @@ public class SimpleScriptParser extends Parser {
 		"\u01dc\u0005\u0011\u0000\u0000\u01dc\u01de\u0003D\"\u0000\u01dd\u01db"+
 		"\u0001\u0000\u0000\u0000\u01dd\u01de\u0001\u0000\u0000\u0000\u01deQ\u0001"+
 		"\u0000\u0000\u0000\u01df\u01e0\u0005\u0014\u0000\u0000\u01e0\u01e1\u0005"+
-		"\u001f\u0000\u0000\u01e1\u01e2\u0005,\u0000\u0000\u01e2\u01e3\u0005 \u0000"+
+		"\u001f\u0000\u0000\u01e1\u01e2\u0003$\u0012\u0000\u01e2\u01e3\u0005 \u0000"+
 		"\u0000\u01e3\u01e7\u0005!\u0000\u0000\u01e4\u01e6\u0003T*\u0000\u01e5"+
 		"\u01e4\u0001\u0000\u0000\u0000\u01e6\u01e9\u0001\u0000\u0000\u0000\u01e7"+
 		"\u01e5\u0001\u0000\u0000\u0000\u01e7\u01e8\u0001\u0000\u0000\u0000\u01e8"+

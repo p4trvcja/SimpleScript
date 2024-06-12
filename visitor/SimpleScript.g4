@@ -164,7 +164,7 @@ conditionalStatement:  ifCondition
 ifCondition : IF LPAREN conditionalOperation RPAREN block (ELIF LPAREN conditionalOperation RPAREN block)* (ELSE block)?; 
 
 //switch
-switchCondition : SWITCH LPAREN NAME RPAREN LBRACE caseClause* defaultClause? RBRACE;
+switchCondition : SWITCH LPAREN expr RPAREN LBRACE caseClause* defaultClause? RBRACE;
 
 caseClause: CASE value COLON statement* (BREAK SEMICOLON)?;
 
@@ -176,7 +176,8 @@ value: NAME
        | NUMBER 
        | BOOLEAN 
        | STRING	 
-       ; 
+       ;
+
 
 str: STRING 
      | NAME

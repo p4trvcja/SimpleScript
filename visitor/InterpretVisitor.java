@@ -126,7 +126,9 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
                 ctx.getStart().getStartIndex(),
                 ctx.getStop().getStopIndex()
         ));
-
+        if(errorLine.split("\n").length > 1){
+            errorLine = errorLine.split("\n")[0];
+        }
         String beginning = "File '" + filePath + "', line "+ line + ":" + (charPositionInLine+errorIndex);
         String middle = message;
         String customizedMsg =  "\n"+ beginning + "\n" + middle + "\n\n";
@@ -1847,21 +1849,34 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
 
     @Override
     public Object visitSwitchCondition(SimpleScriptParser.SwitchConditionContext ctx) {
-        String switchVariableName = ctx.NAME().getText();
-        Variable switchVariable = currentScope().get(switchVariableName);
-
-        if (switchVariable == null) {
-            throw new RuntimeException("Variable " + switchVariableName + " is not defined.");
+        if(ctx.expr() == null){
+            ParserRuleContext context = findParent(ctx);
+            int errorIndex = ctx.getStart().getCharPositionInLine();
+            printError(context, "TypeError: Switch expects an expression", errorIndex);
+            System.exit(1);
         }
+        Object value = visit(ctx.expr());
 
-        Object switchValue = switchVariable.getValue();
+//        Variable switchVariable = currentScope().get(switchVariableName);
+
+//        if (switchVariable == null) {
+//            throw new RuntimeException("Variable " + switchVariableName + " is not defined.");
+//        }
+
+//        Object switchValue = switchVariable.getValue();
         boolean caseMatched = false;
 
         // Iterate through all case clauses
         for (SimpleScriptParser.CaseClauseContext caseCtx : ctx.caseClause()) {
+            if(caseCtx.value() != null && caseCtx.value().NAME() != null){
+//                ParserRuleContext context = findParent(ctx);
+                int errorIndex = caseCtx.value().getStart().getCharPositionInLine();
+                printError(caseCtx, "TypeError: Constant value expected", errorIndex);
+                System.exit(1);
+            }
             Object caseValue = visit(caseCtx.value());
 
-            if (caseMatched || switchValue.equals(caseValue)) {
+            if (caseMatched || value.equals(caseValue)) {
                 caseMatched = true;
                 for (SimpleScriptParser.StatementContext stmtCtx : caseCtx.statement()) {
                     visit(stmtCtx);

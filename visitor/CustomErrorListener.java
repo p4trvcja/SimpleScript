@@ -255,7 +255,7 @@ public class CustomErrorListener extends BaseErrorListener {
                 charPositionInLine = errorLine.length();
             }
             String beginning = "File '" + filePath + "', line "+ line + ":" + (charPositionInLine);
-            String middle = "SyntaxError: " + "Extraneous input: '" + msg.split(" ")[2] + "', expected '" + msg.split("\\{")[1].split(" ")[0] + "'";
+            String middle = "SyntaxError: " + "Extraneous input: " + msg.split(" ")[2] + ", expected " + msg.split("\\{")[1].split(" ")[0].substring(0, msg.split("\\{")[1].split(" ")[0].length()-1);
             String customizedMsg =  "\n"+ beginning + "\n" + middle + "\n\n";
             customizedMsg += "\t" + errorLine + "\n";
             customizedMsg += "\t" + " ".repeat(charPositionInLine - 1) + "^";
