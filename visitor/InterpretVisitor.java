@@ -678,12 +678,12 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
         if(ctx.term().factor().value() != null && ctx.term().factor().value().STRING() != null){
             ParserRuleContext context =  findParent(ctx);
             int errorIndex = ctx.term().factor().value().STRING().getSymbol().getCharPositionInLine();
-            printError(context, "TypeError: String value detected in arithmetic operation: '" + right + "'", errorIndex);
+            printError(ctx.term(), "TypeError: String value detected in arithmetic operation: '" + right + "'", errorIndex);
             System.exit(1);
         }else if(ctx.term().factor().value() != null && ctx.term().factor().value().NAME() != null && Objects.equals(currentScope().get(ctx.term().factor().value().NAME().getText()).type, "string")){
             ParserRuleContext context =  findParent(ctx);
             int errorIndex = ctx.term().factor().value().NAME().getSymbol().getCharPositionInLine();
-            printError(context, "TypeError: String value detected in arithmetic operation: '" + right + "'", errorIndex);
+            printError(ctx.term(), "TypeError: String value detected in arithmetic operation: '" + right + "'", errorIndex);
             System.exit(1);
         }
         Object left = null;
@@ -955,8 +955,8 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
                 boolResult = result instanceof String ? (boolean) parseValue((String) result) : (boolean) result;
             } catch (ClassCastException e) {
                 int errorIndex = ctx.logicalFactor().getStart().getCharPositionInLine();
-                ParserRuleContext statementCtx = findParent(ctx);
-                printError(statementCtx, "Error: Invalid boolean value", errorIndex);
+//                ParserRuleContext statementCtx = findParent(ctx);
+                printError(ctx.logicalFactor(), "Error: Invalid boolean value", errorIndex);
                 System.exit(1);
             }
 
@@ -965,8 +965,8 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
 
             } catch (ClassCastException e) {
                 int errorIndex = ctx.logicalTerm().getStart().getCharPositionInLine();
-                ParserRuleContext statementCtx = findParent(ctx);
-                printError(statementCtx, "Error: Invalid boolean value", errorIndex);
+//                ParserRuleContext statementCtx = findParent(ctx);
+                printError(ctx.logicalFactor(), "Error: Invalid boolean value", errorIndex);
                 System.exit(1);
             }
 
@@ -1001,8 +1001,8 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
                  boolResult = result instanceof String ? (boolean) parseValue((String) result) : (boolean) result;
             } catch (ClassCastException e) {
                 int errorIndex = ctx.logicalPrimary().getStart().getCharPositionInLine();
-                ParserRuleContext statementCtx = findParent(ctx);
-                printError(statementCtx, "Error: Invalid boolean value", errorIndex);
+//                ParserRuleContext statementCtx = findParent(ctx);
+                printError(ctx.logicalPrimary(), "Error: Invalid boolean value", errorIndex);
                 System.exit(1);
             }
 
@@ -1010,8 +1010,8 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
                  nextBoolResult = nextFactorResult instanceof String ? (boolean) parseValue((String) nextFactorResult) : (boolean) nextFactorResult;
             } catch (ClassCastException e) {
                 int errorIndex = ctx.logicalFactor().getStart().getCharPositionInLine();
-                ParserRuleContext statementCtx = findParent(ctx);
-                printError(statementCtx, "Error: Invalid boolean value", errorIndex);
+//                ParserRuleContext statementCtx = findParent(ctx);
+                printError(ctx.logicalPrimary(), "Error: Invalid boolean value", errorIndex);
                 System.exit(1);
             }
 
@@ -1494,13 +1494,45 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
 
     @Override
     public Object visitIfCondition(SimpleScriptParser.IfConditionContext ctx) {
-       boolean result = (boolean) visit(ctx.conditionalOperation(0));
-
+        boolean result;
+        try{
+            if(!(visit(ctx.conditionalOperation(0)) instanceof  Boolean)) {
+                result = (boolean) visit(ctx.conditionalOperation(0));
+            }
+            if(ctx.conditionalOperation(0).logicalTerm() != null && ctx.conditionalOperation(0).logicalTerm().logicalFactor() != null && ctx.conditionalOperation(0).logicalTerm().logicalFactor().logicalPrimary() != null && ctx.conditionalOperation(0).logicalTerm().logicalFactor().logicalPrimary().value() != null && ctx.conditionalOperation(0).logicalTerm().logicalFactor().logicalPrimary().value().STRING() != null){
+                throw new RuntimeException("Variab is not defined.");
+            }
+        }catch(Exception e){
+            int errorIndex = ctx.getStart().getCharPositionInLine();
+            printError(ctx, "IfConditionError: Invalid if condition", errorIndex);
+            System.exit(1);
+        }
+        if(!(visit(ctx.conditionalOperation(0)) instanceof  Boolean)) {
+            result = (boolean) visit(ctx.conditionalOperation(0));
+        }else{
+            result = ((Boolean) visit(ctx.conditionalOperation(0))).booleanValue();
+        }
        if (result) {
            return visit(ctx.block(0));
        } else if (!ctx.ELIF().isEmpty()){
            for (int i = 1; i <= ctx.ELIF().size(); i++) {
-               result = (boolean) visit(ctx.conditionalOperation(i));
+               try{
+                   if(!(visit(ctx.conditionalOperation(i)) instanceof  Boolean)) {
+                       result = (boolean) visit(ctx.conditionalOperation(i));
+                   }
+                   if(ctx.conditionalOperation(i).logicalTerm() != null && ctx.conditionalOperation(i).logicalTerm().logicalFactor() != null && ctx.conditionalOperation(i).logicalTerm().logicalFactor().logicalPrimary() != null && ctx.conditionalOperation(i).logicalTerm().logicalFactor().logicalPrimary().value() != null && ctx.conditionalOperation(i).logicalTerm().logicalFactor().logicalPrimary().value().STRING() != null){
+                       throw new RuntimeException("Variab is not defined.");
+                   }
+               }catch(Exception e){
+                   int errorIndex = ctx.conditionalOperation(i).getStart().getCharPositionInLine();
+                   printError(ctx.conditionalOperation(i), "IfConditionError: Invalid if condition", errorIndex);
+                   System.exit(1);
+               }
+               if(!(visit(ctx.conditionalOperation(i)) instanceof  Boolean)) {
+                   result = (boolean) visit(ctx.conditionalOperation(i));
+               }else{
+                   result = ((Boolean) visit(ctx.conditionalOperation(i))).booleanValue();
+               }
 
                if (result) {
                    return visit(ctx.block(i));
