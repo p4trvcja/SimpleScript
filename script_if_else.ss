@@ -1,8 +1,4 @@
 
-int x(string x){
-    print(x);
-    return(12);
-};
 
+2 concat "2";
 
-x(12);
