@@ -2003,36 +2003,99 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
     @Override
     public Object visitConcatenationOperation(SimpleScriptParser.ConcatenationOperationContext ctx) {
         String left = ctx.children.get(0).getText();
-        left = findVar(left);
-        
+
+        if (left == null || left.isEmpty()) {
+            int errorIndex = ctx.str().get(0).getStart().getCharPositionInLine();
+            printError(ctx, "Error: Needle could not be initialised.", errorIndex);
+            System.exit(1);
+        }
+
+        if (ctx.str().get(0).NAME() != null) {
+            left = findVar(left, false, ctx);
+        } else {
+            left = findVar(left, true, ctx);
+        }
+
         String right = ctx.children.get(2).getText();
-        right = findVar(right);
+
+        if (right == null || right.isEmpty()) {
+            int errorIndex = ctx.str().get(1).getStop().getCharPositionInLine();
+            printError(ctx, "Error: Right value " + right + " is not a string.", errorIndex);
+            System.exit(1);
+        }
+
+        if (ctx.str().get(1).NAME() != null) {
+            right = findVar(right, false, ctx);
+        } else {
+            right = findVar(right, true, ctx);
+        }
 
         return left + right;
     }
 
     @Override
     public Object visitFindOperation(SimpleScriptParser.FindOperationContext ctx) {
+
         String needle = ctx.children.get(2).getText();
-        needle = findVar(needle);
+
+        if (needle == null || needle.isEmpty()) {
+            int errorIndex = ctx.str().get(0).getStart().getCharPositionInLine();
+            printError(ctx, "Error: Needle could not be initialised.", errorIndex);
+            System.exit(1);
+        }
+
+        if (ctx.str().get(0).NAME() != null) {
+            needle = findVar(needle, false, ctx);
+        } else {
+            needle = findVar(needle, true, ctx);
+        }
 
         String haystack = ctx.children.get(4).getText();
-        haystack = findVar(haystack);
+
+        if (haystack == null || haystack.isEmpty()) {
+            int errorIndex = ctx.str().get(1).getStart().getCharPositionInLine();
+            printError(ctx, "Error: Haystack could not be initialised.", errorIndex);
+            System.exit(1);
+        }
+
+        if (ctx.str().get(1).NAME() != null) {
+            haystack = findVar(haystack, false, ctx);
+        } else {
+            haystack = findVar(haystack, true, ctx);
+        }
 
         return haystack.indexOf(needle);
     }
 
-    private String findVar(String str) {
-        if(currentScope().containsKey(str)) {
-            Variable var = currentScope().get(str);
-            if (var == null || !(var.getValue() instanceof String)) {
-                System.err.println("Variable " + str + " is not a string or is not defined.");
-                System.exit(1);
-            }
-            str = var.getValue().toString();
-        } else {
+    private String findVar(String str, boolean isString, ParserRuleContext ctx) {
+
+        if (isString) {
             str = str.substring(1, str.length()-1);
         }
+
+        if (currentScope().containsKey(str)) {
+            Variable var = currentScope().get(str);
+
+            if (!var.type.equals("string")) {
+                int errorIndex = ctx.getStart().getCharPositionInLine();
+                printError(ctx, "Error: Variable '" + str + "' of type " + var.type + " is not a string.", errorIndex);
+                System.exit(1);
+            }
+
+            if (var.getValue() == null) {
+                int errorIndex = ctx.getStart().getCharPositionInLine();
+                printError(ctx, "Error: Variable '" + str + "' hasn't been initialised.", errorIndex);
+                System.exit(1);
+            }
+
+            str = var.getValue().toString();
+        } else {
+            int errorIndex = ctx.getStart().getCharPositionInLine();
+            printError(ctx, "Error: Variable '" + str + "' hasn't been defined.", errorIndex);
+            System.err.println();
+            System.exit(1);
+        }
+
         return str;
     }
 
