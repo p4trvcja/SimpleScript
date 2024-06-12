@@ -1,8 +1,14 @@
 
-int x(string x){
-    print(x);
-    return(12);
+
+
+int fun(int n){
+    if(n == 0){
+        return (0);
+    }elif(n == 1){
+        return(1);
+    }
+    return(fun(n-1) + fun(n-2));
 };
 
 
-x(12);
+print(fun(20));

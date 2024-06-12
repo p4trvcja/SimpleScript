@@ -289,7 +289,7 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
         if (ctx.ASSIGN() != null) {
             if (currentScope.containsKey(name)) {
 
-                if (ctx.expr().value().STRING() != null) {
+                if (ctx.expr().value() != null && ctx.expr().value().STRING() != null) {
                     if (!Objects.equals(currentScope.get(name).type, "string")) {
                         ParserRuleContext context =  findParent(ctx);
                         int errorIndex = ctx.ASSIGN().getSymbol().getCharPositionInLine();
@@ -1393,7 +1393,7 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
         List<String> parameterNames = new ArrayList<>(functionInfo.parameters.keySet());
         for (int i = 0; i < arguments.size(); i++) {
             String parameterName = parameterNames.get(i);
-            if (arguments.get(i).value().STRING() != null) {
+            if (arguments.get(i).value() != null && arguments.get(i).value().STRING() != null) {
                 if (!Objects.equals(functionInfo.parameters.get(parameterName).getType(), "string")){
                     int errorIndex = ctx.LPAREN().getSymbol().getCharPositionInLine();
                     printError(ctx, "Error: Type mismatch in argument: " + parameterName, errorIndex);
