@@ -1,9 +1,9 @@
 
 
-int[] func(){
+int func(){
     int [][] x = [[1,2],[3]];
-    add(x, 5);
-    return(x);
+    int i= 3;
+    return(3);
 };
 
 print(func());
