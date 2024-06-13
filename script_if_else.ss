@@ -3,4 +3,3 @@ if(false){
 }elif(10<20 and 5!="awdawd"){
     print(4);
 }
-
