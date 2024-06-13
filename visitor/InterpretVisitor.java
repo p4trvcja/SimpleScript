@@ -276,7 +276,7 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
                 arrayType.append("[]");
             }
 
-            return arrayType.toString();
+            return String.valueOf(arrayType.toString());
         }
         if(value instanceof Integer){
             return "int";
@@ -1326,21 +1326,21 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
                     printError(context, "TypeError: Function of return type '" + functionInfo.returnType + "' can't return: " + returnValue, errorIndex);
                     System.exit(1);
                 }
-            } else if (!Objects.equals(functionInfo.returnType, checkType(returnValue))) {
+            } else if (!Objects.equals(functionInfo.returnType, checkType(returnValue).intern())) {
                 int errorIndex = ctx.expr().getStart().getCharPositionInLine();
                 printError(ctx, "TypeError: Function of return type '" + functionInfo.returnType + "' can't return: " + returnValue, errorIndex);
                 System.exit(1);
             }
 
 
-            if (!Objects.equals(functionInfo.returnType, checkType(returnValue)+"[]")) {
+            if (!Objects.equals(functionInfo.returnType, checkType(returnValue).intern())) {
                 int errorIndex = ctx.expr().getStart().getCharPositionInLine();
                 printError(ctx, "TypeError: Function of return type '" + functionInfo.returnType + "' can't return: " + returnValue, errorIndex);
                 System.exit(1);
             }
 
             if(functionInfo.returnType.contains("[]")){
-                if(functionInfo.returnType.equals(checkType(returnValue)+"[]")){
+                if(functionInfo.returnType.equals(checkType(returnValue).intern())){
                     return returnValue;
                 }else{
                     int errorIndex = ctx.expr().getStart().getCharPositionInLine();
@@ -1915,8 +1915,8 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
         for (ParseTree child : ctx.children) {
             if (child instanceof SimpleScriptParser.NestedArrayContext) {
                 var c = visit(child);
-                var newType = checkType(c);
-                if(!Objects.equals(type, "") && newType != type){
+                String newType = checkType(c);
+                if(!Objects.equals(type, "") && type.intern() != newType.intern()){
                     int errorIndex = ctx.getParent().getStart().getCharPositionInLine();
                     printError(ctx.getParent(), "ArrayElementTypeError: Array can't take elements of different types", errorIndex);
                     System.exit(1);
@@ -1929,7 +1929,7 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
                 if(((SimpleScriptParser.ExprContext) child).value() != null && ((SimpleScriptParser.ExprContext) child).value().STRING() != null){
                     newType = "string";
                 }
-                if(!Objects.equals(type, "") && newType != type){
+                if(!Objects.equals(type, "") && type.intern() != newType.intern()){
                     int errorIndex = ctx.getParent().getStart().getCharPositionInLine();
                     printError(ctx.getParent(), "ArrayElementTypeError: Array can't take elements of different types", errorIndex);
                     System.exit(1);
@@ -2018,7 +2018,9 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
         Variable arrayVar = currentScope().get(arrayName);
 
         if (arrayVar == null || !(arrayVar.getValue() instanceof List)) {
-            System.err.println("Variable " + arrayName + " is not an array or is not defined.");
+            ParserRuleContext context = findParent(ctx);
+            int errorIndex = ctx.getStart().getCharPositionInLine();
+            printError(context, "TypeError: Variable '" + arrayVar + "' is not an array", errorIndex);
             System.exit(1);
         }
 
@@ -2034,30 +2036,29 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
         String arrType = arrayVar.getType().substring(0, arrayVar.getType().length() - 2);
 
         if (arrayVar == null || !(arrayVar.getValue() instanceof List)) {
-            System.err.println("Variable " + arrayName + " is not an array or is not defined.");
+            ParserRuleContext context = findParent(ctx);
+            int errorIndex = ctx.getStart().getCharPositionInLine();
+            printError(context, "TypeError: Variable '" + arrayVar + "' is not an array", errorIndex);
             System.exit(1);
         }
 
         List<Object> array = (List<Object>) arrayVar.getValue();
         
         Object valueToAdd = visit(ctx.expr());
-        if(Objects.equals(checkType(valueToAdd), arrType)) {
+        if(Objects.equals(checkType(valueToAdd).intern(), arrType.intern())) {
             try {
                 array.add(valueToAdd);
             } catch(Exception e) {
-                System.err.println("Type of variable: " + valueToAdd.getClass() + " does not match with array type: " + arrType);
+                ParserRuleContext context = findParent(ctx);
+                int errorIndex = ctx.getStart().getCharPositionInLine();
+                printError(context, "TypeError: Type of added value does not match with the array type", errorIndex);
                 System.exit(1);
             }
-        } else if(arrType.equals("double")) {
-            try {
-                double value = Double.parseDouble(valueToAdd.toString());
-                array.add(value);
-            } catch(Exception e) {
-                System.err.println("Type of variable: " + valueToAdd.getClass() + " does not match with array type: " + arrType);
-                System.exit(1);
-            }
-        } else if(arrType.equals("string")) {
-            array.add(valueToAdd);
+        }else{
+            ParserRuleContext context = findParent(ctx);
+            int errorIndex = ctx.getStart().getCharPositionInLine();
+            printError(context, "TypeError: Type of added value does not match with the array type", errorIndex);
+            System.exit(1);
         }
         // array.add(valueToAdd);
         return array;
