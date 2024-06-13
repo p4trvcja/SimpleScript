@@ -1295,18 +1295,6 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
                     System.exit(1);
                 }
             
-            } else if (ctx.expr().functionInvocation() != null) {
-                String val = ctx.expr().functionInvocation().NAME().getText();
-                for (var function : functionDeque) {
-                    if (function.containsKey(val)) {
-                        if (!Objects.equals(functionInfo.returnType, "string")) {
-                            ParserRuleContext context = findParent(ctx);
-                            int errorIndex = ctx.getStart().getCharPositionInLine();
-                            printError(context, "TypeError: Function of return type '" + functionInfo.returnType + "' can't return: " + returnValue, errorIndex);
-                            System.exit(1);
-                        }
-                    }
-                }
             } else if (ctx.expr().arithmeticOperation() != null || ctx.expr().conditionalOperation() != null || ctx.expr().singleValueOperation() != null) {
                 if (Objects.equals(functionInfo.returnType, "string")) {
                     ParserRuleContext context = findParent(ctx);
