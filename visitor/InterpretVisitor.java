@@ -1294,19 +1294,7 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
                     printError(ctx, "TypeError: Function of return type '" + functionInfo.returnType + "' can't return: \"" + returnValue + "\"", errorIndex);
                     System.exit(1);
                 }
-            } else if (ctx.expr().value() != null && ctx.expr().value().NAME() != null) {
-                Object name = ctx.expr().value().NAME().getText();
-
-                for (Map<String, Variable> scope : scopeStack) {
-                    if (scope.containsKey(name)) {
-                        Variable variable = scope.get(name);
-                        if (variable.type.equals("string") && !Objects.equals(functionInfo.returnType, "string")) {
-                            int errorIndex = ctx.expr().getStart().getCharPositionInLine();
-                            printError(ctx, "TypeError: Function of return type '" + functionInfo.returnType + "' can't return: \"" + returnValue + "\"", errorIndex);
-                            System.exit(1);
-                        }
-                    }
-                }
+            
             } else if (ctx.expr().functionInvocation() != null) {
                 String val = ctx.expr().functionInvocation().NAME().getText();
                 for (var function : functionDeque) {
@@ -1326,29 +1314,26 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
                     printError(context, "TypeError: Function of return type '" + functionInfo.returnType + "' can't return: " + returnValue, errorIndex);
                     System.exit(1);
                 }
-            } else if (!Objects.equals(functionInfo.returnType, checkType(returnValue).intern())) {
-                int errorIndex = ctx.expr().getStart().getCharPositionInLine();
-                printError(ctx, "TypeError: Function of return type '" + functionInfo.returnType + "' can't return: " + returnValue, errorIndex);
-                System.exit(1);
             }
 
-
-            if (!Objects.equals(functionInfo.returnType, checkType(returnValue).intern())) {
-                int errorIndex = ctx.expr().getStart().getCharPositionInLine();
-                printError(ctx, "TypeError: Function of return type '" + functionInfo.returnType + "' can't return: " + returnValue, errorIndex);
-                System.exit(1);
-            }
-
-            if(functionInfo.returnType.contains("[]")){
-                if(functionInfo.returnType.equals(checkType(returnValue).intern())){
-                    return returnValue;
-                }else{
-                    int errorIndex = ctx.expr().getStart().getCharPositionInLine();
-                    printError(ctx, "TypeError: Function of return type '" + functionInfo.returnType + "' can't return: " + returnValue, errorIndex);
-                    System.exit(1);
-                }
-
-            }
+           else if (functionInfo.returnType.contains("[]") && !Objects.equals(functionInfo.returnType.intern(), (checkType(returnValue)+"[]").intern())) {
+               System.out.println(checkType(returnValue));
+               int errorIndex = ctx.expr().getStart().getCharPositionInLine();
+               printError(ctx, "TypeError: Function of return type '" + functionInfo.returnType + "' can't return: " + returnValue, errorIndex);
+               System.exit(1);
+           } else if(functionInfo.returnType.contains("[]")){
+               if(functionInfo.returnType.equals((checkType(returnValue)+"[]").intern())){
+                   return returnValue;
+               }else{
+                   int errorIndex = ctx.expr().getStart().getCharPositionInLine();
+                   printError(ctx, "TypeError: Function of return type '" + functionInfo.returnType + "' can't return: " + returnValue, errorIndex);
+                   System.exit(1);
+               }
+           } else if (!Objects.equals(functionInfo.returnType.intern(), checkType(returnValue).intern())) {
+            int errorIndex = ctx.expr().getStart().getCharPositionInLine();
+            printError(ctx, "TypeError: Function of return type '" + functionInfo.returnType + "' can't return: " + returnValue, errorIndex);
+            System.exit(1);
+        }
 
             return switch (functionInfo.returnType) {
                         case "int" -> Integer.valueOf((String) returnValue);
