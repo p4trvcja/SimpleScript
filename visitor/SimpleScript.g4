@@ -96,6 +96,7 @@ factor: value
       | functionInvocation
       | '(' expr ')'
       | '-' factor
+      | singleValueOperation
       ;
 
 

@@ -598,7 +598,13 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
             return visit(ctx.expr());
         }else if (ctx.functionInvocation() != null){
             return visitFunctionInvocation(ctx.functionInvocation());
-        } else {
+        }else if (ctx.functionInvocation() != null){
+            return visitFunctionInvocation(ctx.functionInvocation());
+        } else if(ctx.singleValueOperation() != null){
+            return visitSingleValueOperation(ctx.singleValueOperation());
+        }
+        
+        else {
             System.err.println("Error: Incorrect factor context");
             System.exit(1);
         }
@@ -1237,7 +1243,7 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
         Variable variable = currentScope.get(variableName);
         variable.setValue(value);
     
-        return null;
+        return value;
     }
 
     @Override
@@ -1276,7 +1282,7 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
 
             if(functionStack.size() < 2){
                 int errorIndex = ctx.RETURN().getSymbol().getCharPositionInLine();
-                printError(ctx, ": Return statement not inside a function", errorIndex);
+                printError(ctx, "ReturnError: Return statement not inside a function", errorIndex);
                 System.exit(1);
             }
 
@@ -1351,6 +1357,17 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
                     };
 
         } catch (Exception e1) {
+
+            if(functionStack.size() < 2){
+                int errorIndex = ctx.RETURN().getSymbol().getCharPositionInLine();
+                printError(ctx, "ReturnError: Return statement not inside a function", errorIndex);
+                System.exit(1);
+            }
+            if(!functionInfo.returnType.equals("void") && ctx.expr() == null){
+                int errorIndex = ctx.RETURN().getSymbol().getCharPositionInLine();
+                printError(ctx, "ReturnError: Function of return type '" + functionInfo.returnType + "' should return a value", errorIndex);
+                System.exit(1);
+            }
 
             if (returnValue instanceof String) {
                 returnValue = sourceVariable((String) returnValue);
