@@ -1,5 +1,7 @@
 package visitor;
 import java.util.*;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 import org.antlr.v4.runtime.ParserRuleContext;
@@ -215,6 +217,47 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
     }
 
     private String checkType (Object value) {
+        if(value.toString().startsWith("[")){
+            var input = value.toString().trim();
+
+            // Check the dimensions of the array
+            int dimensions = 0;
+            for (char ch : input.toCharArray()) {
+                if (ch == '[') {
+                    dimensions++;
+                } else {
+                    break;
+                }
+            }
+            dimensions /= 2;  // Each dimension has two brackets
+            if(dimensions<1){
+                dimensions = 1;
+            }
+
+            // Determine the element type by extracting one element
+            Pattern pattern = Pattern.compile("\\d+(\\.\\d+)?|\"[^\"]*\"|true|false");
+            Matcher matcher = pattern.matcher(input);
+            String elementType = "string";
+
+            if (matcher.find()) {
+                String element = matcher.group();
+                if (element.matches("-?\\d+")) {
+                    elementType = "int";
+                } else if (element.matches("-?\\d*\\.\\d+")) {
+                    elementType = "float";
+                } else if (element.matches("true|false")) {
+                    elementType = "bool";
+                }
+            }
+
+            // Construct the array type string
+            StringBuilder arrayType = new StringBuilder(elementType);
+            for (int i = 0; i < dimensions; i++) {
+                arrayType.append("[]");
+            }
+
+            return arrayType.toString();
+        }
         if(value instanceof Integer){
             return "int";
         }else if(value instanceof Float){
@@ -1098,6 +1141,8 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
             return ctx.NUMBER().getText(); // Return number value
         } else if (ctx.BOOLEAN() != null) {
             return ctx.BOOLEAN().getText(); // Return boolean value
+        } else if(ctx.nestedArray() != null){
+            return visit(ctx.nestedArray());
         }
 
         return null;
@@ -1220,10 +1265,21 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
             }
 
 
-            if (!Objects.equals(functionInfo.returnType, checkType(returnValue))) {
+            if (!Objects.equals(functionInfo.returnType, checkType(returnValue)+"[]")) {
                 int errorIndex = ctx.expr().getStart().getCharPositionInLine();
                 printError(ctx, "TypeError: Function of return type '" + functionInfo.returnType + "' can't return: " + returnValue, errorIndex);
                 System.exit(1);
+            }
+
+            if(functionInfo.returnType.contains("[]")){
+                if(functionInfo.returnType.equals(checkType(returnValue)+"[]")){
+                    return returnValue;
+                }else{
+                    int errorIndex = ctx.expr().getStart().getCharPositionInLine();
+                    printError(ctx, "TypeError: Function of return type '" + functionInfo.returnType + "' can't return: " + returnValue, errorIndex);
+                    System.exit(1);
+                }
+
             }
 
             return switch (functionInfo.returnType) {
@@ -1238,6 +1294,10 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
 
             if (returnValue instanceof String) {
                 returnValue = sourceVariable((String) returnValue);
+            }
+
+            if(functionInfo.returnType.contains("[]")){
+                return returnValue;
             }
 
             try {
@@ -1264,7 +1324,13 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
 
     @Override
     public Object visitFunctionDeclaration(SimpleScriptParser.FunctionDeclarationContext ctx) {
-        String returnType = ctx.TYPE(0).getText();
+        String returnType = "";
+        if(ctx.TYPE(0) != null){
+            returnType = ctx.TYPE(0).getText();
+        }else if(ctx.arrayType() != null){
+            returnType = ctx.arrayType(0).getText();
+        }
+
         String functionName = ctx.NAME(0).getText();
 
         if (ctx.block() == null) {
@@ -1279,7 +1345,12 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
 
         Map<String, Variable> parameters = new LinkedHashMap<>();
         for (int i = 1; i < ctx.NAME().size(); i++) {
-            String type = ctx.TYPE(i).getText();
+            String type = "";
+            if(ctx.TYPE(i) != null){
+                type = ctx.TYPE(i).getText();
+            }else if(ctx.arrayType() != null){
+                type = ctx.arrayType(i).getText();
+            }
             String name = ctx.NAME(i).getText();
             parameters.put(name, new Variable(type, null, scopeStack.size()));
         }
@@ -1726,7 +1797,8 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
         Object array = visit(ctx.nestedArray());
 
         if (!validateArrayDimensions(array, dimensions)) {
-            System.err.println("Error: Array '" + name + "' dimensions do not match the declared type");
+            int errorIndex = ctx.getParent().getStart().getCharPositionInLine();
+            printError(ctx.getParent(), "TypeError: Array '" + name + "' dimensions do not match the declared type", errorIndex);
             System.exit(1);
         }
 
@@ -1759,11 +1831,31 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
     @Override
     public Object visitNestedArray(SimpleScriptParser.NestedArrayContext ctx) {
         List<Object> array = new ArrayList<>();
+        String type = "";
 
         for (ParseTree child : ctx.children) {
             if (child instanceof SimpleScriptParser.NestedArrayContext) {
+                var c = visit(child);
+                var newType = checkType(c);
+                if(!Objects.equals(type, "") && newType != type){
+                    int errorIndex = ctx.getParent().getStart().getCharPositionInLine();
+                    printError(ctx.getParent(), "ArrayElementTypeError: Array can't take elements of different types", errorIndex);
+                    System.exit(1);
+                }
+                type = newType;
                 array.add(visit(child));
             } else if (child instanceof SimpleScriptParser.ExprContext) {
+                var c = visit(child);
+                String newType = checkType(c);
+                if(((SimpleScriptParser.ExprContext) child).value() != null && ((SimpleScriptParser.ExprContext) child).value().STRING() != null){
+                    newType = "string";
+                }
+                if(!Objects.equals(type, "") && newType != type){
+                    int errorIndex = ctx.getParent().getStart().getCharPositionInLine();
+                    printError(ctx.getParent(), "ArrayElementTypeError: Array can't take elements of different types", errorIndex);
+                    System.exit(1);
+                }
+                type = newType;
                 array.add(visit(child));
             }
         }
@@ -1778,6 +1870,12 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
 
         for (SimpleScriptParser.ExprContext exprCtx : ctx.expr()) {
             Object index = visit(exprCtx);
+            if (exprCtx.value() != null && exprCtx.value().STRING() != null){
+                ParserRuleContext context = findParent(ctx);
+                int errorIndex = ctx.getStart().getCharPositionInLine();
+                printError(context, "IndexError: Index for an array has to be an Integer", errorIndex);
+                System.exit(1);
+            }
             if (index instanceof String) {
                 index = parseValue((String) index);
             }
@@ -1785,13 +1883,17 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
         }
 
         if (indices.stream().anyMatch(index -> !(index instanceof Integer))) {
-            System.err.println("Error: Array indices must be integers");
+            ParserRuleContext context = findParent(ctx);
+            int errorIndex = ctx.getStart().getCharPositionInLine();
+            printError(context, "IndexError: Index for an array has to be an Integer", errorIndex);
             System.exit(1);
         }
 
         Map<String, Variable> localVariables = currentScope();
         if (!localVariables.containsKey(arrayName)) {
-            System.err.println("Error: Array '" + arrayName + "' has not been declared");
+            ParserRuleContext context = findParent(ctx);
+            int errorIndex = ctx.getStart().getCharPositionInLine();
+            printError(context, "NameError: Array: " + arrayName + " has not been declared", errorIndex);
             System.exit(1);
         }
 
@@ -1801,13 +1903,17 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
         for (Object index : indices) {
             int intIndex = (int) index;
             if (!(value instanceof List)) {
-                System.err.println("Error: Variable '" + arrayName + "' is not an array");
+                ParserRuleContext context = findParent(ctx);
+                int errorIndex = ctx.getStart().getCharPositionInLine();
+                printError(context, "TypeError: '" + value + "' is not an array", errorIndex);
                 System.exit(1);
             }
 
             List<?> array = (List<?>) value;
             if (intIndex < 0 || intIndex >= array.size()) {
-                System.err.println("Error: Array index out of bounds");
+                ParserRuleContext context = findParent(ctx);
+                int errorIndex = ctx.getStart().getCharPositionInLine();
+                printError(context, "IndexError: Array index out of bounds", errorIndex);
                 System.exit(1);
             }
 
@@ -1856,10 +1962,9 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
         List<Object> array = (List<Object>) arrayVar.getValue();
         
         Object valueToAdd = visit(ctx.expr());
-        if(arrType.equals("int")) {
+        if(Objects.equals(checkType(valueToAdd), arrType)) {
             try {
-                int value = Integer.parseInt(valueToAdd.toString());
-                array.add(value);
+                array.add(valueToAdd);
             } catch(Exception e) {
                 System.err.println("Type of variable: " + valueToAdd.getClass() + " does not match with array type: " + arrType);
                 System.exit(1);
@@ -1876,7 +1981,7 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
             array.add(valueToAdd);
         }
         // array.add(valueToAdd);
-        return null;
+        return array;
     }
 
     @Override

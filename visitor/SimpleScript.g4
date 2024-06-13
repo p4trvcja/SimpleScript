@@ -175,7 +175,8 @@ defaultClause: DEFAULT COLON statement* (BREAK SEMICOLON)?;
 value: NAME 
        | NUMBER 
        | BOOLEAN 
-       | STRING	 
+       | STRING
+       | nestedArray
        ;
 
 

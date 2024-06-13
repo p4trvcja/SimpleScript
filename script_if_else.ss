@@ -1,10 +1,4 @@
 
 
-
-
-
-if(false){
-    print(3);
-}elif(10<20 and 5!="awdawd"){
-    print(4);
-}
+int [][] x = [[1]];
+print(x[0]["0"]);
