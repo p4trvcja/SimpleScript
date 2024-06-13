@@ -2194,7 +2194,7 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
 
             if (!var.type.equals("string")) {
                 int errorIndex = ctx.getStart().getCharPositionInLine();
-                printError(ctx, "Error: Variable '" + str + "' of type " + var.type + " is not a string.", errorIndex);
+                printError(ctx, "StringOperationError: Variable '" + str + "' is not a string or the name of a string variable", errorIndex);
                 System.exit(1);
             }
 

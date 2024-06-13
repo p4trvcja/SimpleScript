@@ -1,9 +1,8 @@
 
 
-int func(){
-    int [][] x = [[1,2],[3]];
-    int i= 3;
-    return(3);
-};
-
-print(func());
+string s = "input: nothing |";
+string[] output = ["hello", " this", " is", " the", " output!!!"];
+s = s concat " output: ";
+print(s);
+string b = "awdawd";
+s concat output;
