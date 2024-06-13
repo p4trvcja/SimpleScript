@@ -1326,23 +1326,20 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
                 System.exit(1);
             }
 
-
-            if (!Objects.equals(functionInfo.returnType, checkType(returnValue)+"[]")) {
-                int errorIndex = ctx.expr().getStart().getCharPositionInLine();
-                printError(ctx, "TypeError: Function of return type '" + functionInfo.returnType + "' can't return: " + returnValue, errorIndex);
-                System.exit(1);
-            }
-
-            if(functionInfo.returnType.contains("[]")){
-                if(functionInfo.returnType.equals(checkType(returnValue)+"[]")){
-                    return returnValue;
-                }else{
-                    int errorIndex = ctx.expr().getStart().getCharPositionInLine();
-                    printError(ctx, "TypeError: Function of return type '" + functionInfo.returnType + "' can't return: " + returnValue, errorIndex);
-                    System.exit(1);
-                }
-
-            }
+//            else if (functionInfo.returnType.contains("[]") && !Objects.equals(functionInfo.returnType, checkType(returnValue)+"[]")) {
+//                System.out.println(checkType(returnValue));
+//                int errorIndex = ctx.expr().getStart().getCharPositionInLine();
+//                printError(ctx, "TypeError: Function of return type '" + functionInfo.returnType + "' can't return: " + returnValue, errorIndex);
+//                System.exit(1);
+//            } else if(functionInfo.returnType.contains("[]")){
+//                if(functionInfo.returnType.equals(checkType(returnValue)+"[]")){
+//                    return returnValue;
+//                }else{
+//                    int errorIndex = ctx.expr().getStart().getCharPositionInLine();
+//                    printError(ctx, "TypeError: Function of return type '" + functionInfo.returnType + "' can't return: " + returnValue, errorIndex);
+//                    System.exit(1);
+//                }
+//            }
 
             return switch (functionInfo.returnType) {
                         case "int" -> Integer.valueOf((String) returnValue);
