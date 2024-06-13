@@ -1327,7 +1327,9 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
                     System.exit(1);
                 }
             } else if (!Objects.equals(functionInfo.returnType, checkType(returnValue))) {
-
+                int errorIndex = ctx.expr().getStart().getCharPositionInLine();
+                printError(ctx, "TypeError: Function of return type '" + functionInfo.returnType + "' can't return: " + returnValue, errorIndex);
+                System.exit(1);
             }
 
 
@@ -2198,6 +2200,7 @@ public class InterpretVisitor extends SimpleScriptBaseVisitor<Object> {
 
         if (isString) {
             str = str.substring(1, str.length()-1);
+            return str;
         }
 
         if (currentScope().containsKey(str)) {
